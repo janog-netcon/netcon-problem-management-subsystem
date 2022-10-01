@@ -20,34 +20,28 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ProblemSpec defines the desired state of Problem
 type ProblemSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of Problem. Edit problem_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	ContainerLabManifest FileSource `json:"containerLabManifest"`
 }
 
-// ProblemStatus defines the observed state of Problem
-type ProblemStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+type FileSource struct {
+	ConfigMapRef ConfigMapFileSource `json:"configMapRef"`
+}
+
+type ConfigMapFileSource struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
 }
 
 //+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
 
 // Problem is the Schema for the problems API
 type Problem struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ProblemSpec   `json:"spec,omitempty"`
-	Status ProblemStatus `json:"status,omitempty"`
+	Spec ProblemSpec `json:"spec,omitempty"`
 }
 
 //+kubebuilder:object:root=true

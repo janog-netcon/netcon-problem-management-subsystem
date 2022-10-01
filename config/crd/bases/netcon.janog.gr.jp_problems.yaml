@@ -35,16 +35,24 @@ spec:
           spec:
             description: ProblemSpec defines the desired state of Problem
             properties:
-              foo:
-                description: Foo is an example field of Problem. Edit problem_types.go
-                  to remove/update
-                type: string
-            type: object
-          status:
-            description: ProblemStatus defines the observed state of Problem
+              containerLabManifest:
+                properties:
+                  configMapRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                required:
+                - configMapRef
+                type: object
+            required:
+            - containerLabManifest
             type: object
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
