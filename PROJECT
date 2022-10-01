@@ -1,7 +1,7 @@
 domain: janog.gr.jp
 layout:
 - go.kubebuilder.io/v3
-projectName: netcon-problem-management-subsystem
+projectName: netcon-pms
 repo: github.com/janog-netcon/netcon-problem-management-subsystem
 resources:
 - api:
