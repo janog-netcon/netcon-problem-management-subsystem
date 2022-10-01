@@ -1,0 +1,31 @@
+# permissions for end users to edit problems.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: problem-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: netcon-problem-management-subsystem
+    app.kubernetes.io/part-of: netcon-problem-management-subsystem
+    app.kubernetes.io/managed-by: kustomize
+  name: problem-editor-role
+rules:
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - problems
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - problems/status
+  verbs:
+  - get
