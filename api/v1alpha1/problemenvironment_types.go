@@ -20,11 +20,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	CertificateConditionReady string = "Ready"
+)
+
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
 type ProblemEnvironmentSpec struct {
 	ProblemRef ProblemReference `json:"problemRef"`
 
-	WorkerName string `json:"workerName"`
+	WorkerName string `json:"workerName,omitempty"`
 }
 
 type ProblemReference struct {
@@ -33,6 +37,7 @@ type ProblemReference struct {
 
 // ProblemEnvironmentStatus defines the observed state of ProblemEnvironment
 type ProblemEnvironmentStatus struct {
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
