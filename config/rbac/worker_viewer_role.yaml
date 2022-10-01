@@ -1,0 +1,27 @@
+# permissions for end users to view workers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: worker-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: netcon-problem-management-subsystem
+    app.kubernetes.io/part-of: netcon-problem-management-subsystem
+    app.kubernetes.io/managed-by: kustomize
+  name: worker-viewer-role
+rules:
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - workers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - workers/status
+  verbs:
+  - get
