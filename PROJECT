@@ -1,0 +1,6 @@
+domain: janog.gr.jp
+layout:
+- go.kubebuilder.io/v3
+projectName: netcon-problem-management-subsystem
+repo: github.com/janog-netcon/netcon-problem-management-subsystem
+version: "3"
