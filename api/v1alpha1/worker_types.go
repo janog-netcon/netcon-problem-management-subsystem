@@ -27,11 +27,12 @@ type WorkerStatus struct {
 
 type WorkerInfo struct {
 	ExternalIPAddress string `json:"externalIPAddress"`
-	Hostname string `json:"hostname"`
+	Hostname          string `json:"hostname"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
 
 // Worker is the Schema for the workers API
 type Worker struct {

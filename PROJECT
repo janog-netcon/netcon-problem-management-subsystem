@@ -6,7 +6,6 @@ repo: github.com/janog-netcon/netcon-problem-management-subsystem
 resources:
 - api:
     crdVersion: v1
-    namespaced: true
   domain: janog.gr.jp
   group: netcon
   kind: Worker
