@@ -8,16 +8,16 @@ import (
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 )
 
-type NoopProblemEnvironmentDriver struct{}
+type ContainerLabProblemEnvironmentDriver struct{}
 
-var _ ProblemEnvironmentDriver = &NoopProblemEnvironmentDriver{}
+var _ ProblemEnvironmentDriver = &ContainerLabProblemEnvironmentDriver{}
 
-func NewNoopProblemEnvironmentDriver() *NoopProblemEnvironmentDriver {
-	return &NoopProblemEnvironmentDriver{}
+func NewContainerLabProblemEnvironmentDriver() *ContainerLabProblemEnvironmentDriver {
+	return &ContainerLabProblemEnvironmentDriver{}
 }
 
 // Check implements ProblemEnvironmentDriver
-func (*NoopProblemEnvironmentDriver) Check(
+func (d *ContainerLabProblemEnvironmentDriver) Check(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
@@ -26,7 +26,7 @@ func (*NoopProblemEnvironmentDriver) Check(
 }
 
 // Deploy implements ProblemEnvironmentDriver
-func (*NoopProblemEnvironmentDriver) Deploy(
+func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
@@ -35,7 +35,7 @@ func (*NoopProblemEnvironmentDriver) Deploy(
 }
 
 // Destroy implements ProblemEnvironmentDriver
-func (*NoopProblemEnvironmentDriver) Destroy(
+func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,

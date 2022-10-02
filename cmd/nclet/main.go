@@ -33,6 +33,7 @@ import (
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet/drivers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -73,10 +74,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	driver := drivers.NewNoopProblemEnvironmentDriver()
+
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(mgr, driver); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProblemEnvironment")
 		os.Exit(1)
 	}

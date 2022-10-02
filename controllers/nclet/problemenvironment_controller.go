@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet/drivers"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
 
@@ -42,6 +43,8 @@ type ProblemEnvironmentReconciler struct {
 	Scheme *runtime.Scheme
 
 	name string
+
+	driver drivers.ProblemEnvironmentDriver
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -125,8 +128,18 @@ func (r *ProblemEnvironmentReconciler) cleanup(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	// TODO(proelbtn): cleaning up instance
 	log.Info("ProblemEnvironment is cleaning up")
+	if err := r.driver.Destroy(ctx, r.Client, *problemEnvironment); err != nil {
+		message := "failed to destroy ProblemEnvironment"
+		util.SetProblemEnvironmentCondition(
+			problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionReady,
+			metav1.ConditionFalse,
+			"DestroyFailed",
+			message,
+		)
+		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
+	}
 
 	controllerutil.RemoveFinalizer(problemEnvironment, ProblemEnvironmentFinalizer)
 	return r.update(ctx, problemEnvironment, ctrl.Result{})
@@ -139,6 +152,52 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 	log := log.FromContext(ctx)
 
 	// TODO(proelbtn): instantiate
+	status, err := r.driver.Check(ctx, r.Client, *problemEnvironment)
+	if err != nil {
+		message := "failed to check ProblemEnvironment"
+		log.Error(err, message)
+		util.SetProblemEnvironmentCondition(
+			problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionReady,
+			metav1.ConditionFalse,
+			"CheckFailed",
+			message,
+		)
+		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
+	}
+
+	log.V(1).Info("checked the status of ProblemEnvironment", "status", status)
+
+	switch status {
+	case drivers.StatusPartiallyUp:
+		if err := r.driver.Deploy(ctx, r.Client, *problemEnvironment); err != nil {
+			message := "failed to destroy ProblemEnvironment"
+			log.Error(err, message)
+			util.SetProblemEnvironmentCondition(
+				problemEnvironment,
+				netconv1alpha1.ProblemEnvironmentConditionReady,
+				metav1.ConditionFalse,
+				"DestroyFailed",
+				message,
+			)
+			return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
+		}
+		fallthrough
+	case drivers.StatusDown:
+		if err := r.driver.Deploy(ctx, r.Client, *problemEnvironment); err != nil {
+			message := "failed to deploy ProblemEnvironment"
+			log.Error(err, message)
+			util.SetProblemEnvironmentCondition(
+				problemEnvironment,
+				netconv1alpha1.ProblemEnvironmentConditionReady,
+				metav1.ConditionFalse,
+				"DeployFailed",
+				message,
+			)
+			return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
+		}
+	}
+
 	message := "ProblemEnvironment is instantiated"
 	log.Info(message)
 	util.SetProblemEnvironmentCondition(
@@ -149,12 +208,13 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 		message,
 	)
 
-	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
+	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ProblemEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ProblemEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager, driver drivers.ProblemEnvironmentDriver) error {
 	r.name = WorkerName
+	r.driver = driver
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&netconv1alpha1.ProblemEnvironment{}).
