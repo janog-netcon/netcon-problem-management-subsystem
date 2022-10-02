@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
-	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/controller-manager"
 	//+kubebuilder:scaffold:imports
 )
 

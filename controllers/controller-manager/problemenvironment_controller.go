@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
-	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/util"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
 
 // ProblemEnvironmentReconciler reconciles a ProblemEnvironment object
