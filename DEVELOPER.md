@@ -78,6 +78,14 @@ $ docker run -d \
     --name nclet \
     --net host \
     -e KUBECONFIG=/etc/kubernetes/kubeconfig \
+    -v /var/run/docker.sock:/var/run/docker.sock \
     -v $(pwd)/kubeconfig:/etc/kubernetes/kubeconfig \
     proelbtn/netcon-pms-nclet:dev
+```
+
+```
+sudo yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
+echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
+
+sudo yum install containerlab
 ```

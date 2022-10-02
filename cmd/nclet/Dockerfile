@@ -24,10 +24,13 @@ COPY pkg/ pkg/
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o nclet ./cmd/nclet
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM nicolaka/netshoot:v0.7
 WORKDIR /
+
+RUN wget https://github.com/srl-labs/containerlab/releases/download/v0.32.0/containerlab_0.32.0_linux_amd64.apk -O /tmp/containerlab.apk && \
+    apk add --allow-untrusted /tmp/containerlab.apk && \
+    rm -rf /tmp/containerlab.apk
+
 COPY --from=builder /workspace/nclet .
 USER 65532:65532
 
