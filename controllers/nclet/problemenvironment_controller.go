@@ -18,27 +18,31 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
 
+// TODO: fetch Worker name dynamically
+const WorkerName string = "worker001"
+
 // ProblemEnvironmentReconciler reconciles a ProblemEnvironment object
 type ProblemEnvironmentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-}
 
-//+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments/status,verbs=get;update;patch
+	name          string
+	finalizerName string
+}
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -52,23 +56,66 @@ func (r *ProblemEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	// check whether ProblemEnvironment is being deleted or not
 	if problemEnvironment.DeletionTimestamp != nil {
-		// there is nothing to do on ProblemEnvironment controller
+		if controllerutil.ContainsFinalizer(&problemEnvironment, r.finalizerName) {
+			// ProblemEnvironment is assigned to this Worker, cleaning up
+			log.Info("ProblemEnvironment is being deleted, cleaning up instance")
+			return r.cleanup(ctx, &problemEnvironment)
+		}
+
+		// ProblemEnvironment is assigned to other Worker, ignoring
 		return ctrl.Result{}, nil
 	}
 
-	if owners := problemEnvironment.GetOwnerReferences(); len(owners) == 0 {
-		return r.setOwnerReference(ctx, &problemEnvironment)
-	}
-
+	// now, we are reconciling for **alive** ProblemEnvironments
+	// check whether ProblemEnvironment is already assigned to any Worker
 	if problemEnvironment.Spec.WorkerName == "" {
-		//
-		return r.schedule(ctx, &problemEnvironment)
+		log.V(1).Info("ProblemEnvironment isn't assigned to any Worker yet")
+		return ctrl.Result{}, nil
 	}
 
-	// ProblemEnvironment is already scheduled
-	// so, there is nothing to do on ProblemEnvironment controller
-	return ctrl.Result{}, nil
+	// now, we are reconciling for **scheduled** ProblemEnvironments
+	if problemEnvironment.Spec.WorkerName != r.name {
+		// in case that ProblemEnvironment is assigned to other Worker
+
+		if controllerutil.ContainsFinalizer(&problemEnvironment, r.finalizerName) {
+			log.Info(
+				"reassigned ProblemEnvironment to other Worker",
+				"newWorkerName",
+				problemEnvironment.Spec.WorkerName,
+			)
+			util.SetProblemEnvironmentCondition(
+				&problemEnvironment,
+				netconv1alpha1.ProblemEnvironmentConditionReady,
+				metav1.ConditionFalse,
+				"Rescheduling", "",
+			)
+
+			r.cleanup(ctx, &problemEnvironment)
+
+		}
+
+		return ctrl.Result{}, nil
+	}
+
+	switch len(problemEnvironment.Finalizers) {
+	case 0:
+		log.Info("scheduled ProblemEnvironment to this Worker")
+		return r.instantiate(ctx, &problemEnvironment)
+	case 1:
+		if !controllerutil.ContainsFinalizer(&problemEnvironment, r.finalizerName) {
+			log.Info("waiting old Worker for cleaning up ProblemEnvironment")
+			return ctrl.Result{}, nil
+		}
+		// TODO(proelbtn): watch instance
+		return ctrl.Result{}, nil
+	default:
+		// unknown state, it may just bug
+		err := fmt.Errorf("multiple finalizers are registered to ProblemEnvironment")
+		log.Error(err, "failed to instantiate ProblemEnvironment")
+		return ctrl.Result{}, err
+	}
 }
 
 func (r *ProblemEnvironmentReconciler) setLoggerFor(ctx context.Context, req ctrl.Request) context.Context {
@@ -117,99 +164,35 @@ func (r *ProblemEnvironmentReconciler) updateBoth(
 	return r.updateStatus(ctx, problemEnvironment, res)
 }
 
-func (r *ProblemEnvironmentReconciler) setOwnerReference(
+func (r *ProblemEnvironmentReconciler) cleanup(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	_ = log.FromContext(ctx)
 
-	problem := netconv1alpha1.Problem{}
-	if err := r.Get(ctx, types.NamespacedName{
-		Namespace: problemEnvironment.Namespace,
-		Name:      problemEnvironment.Spec.ProblemRef.Name,
-	}, &problem); err != nil {
-		message := "failed to find problem referenced by .spec.problemRef.Name"
-		log.Error(err, message)
-		util.SetProblemEnvironmentCondition(
-			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionInitialized,
-			metav1.ConditionFalse,
-			"ProblemMissing",
-			message,
-		)
+	// TODO(proelbtn): cleaning up instance
 
-		// TODO(proelbtn): try to adopt exponentialBackOff
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
-	}
-
-	// TODO(proelbtn): is it really okay to use SetControllerReference?
-	if err := ctrl.SetControllerReference(&problem, problemEnvironment, r.Scheme); err != nil {
-		log.Error(err, "failed to set controller reference")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
-	}
-
-	util.SetProblemEnvironmentCondition(
-		problemEnvironment,
-		netconv1alpha1.ProblemEnvironmentConditionInitialized,
-		metav1.ConditionTrue,
-		"", "",
-	)
-
+	controllerutil.RemoveFinalizer(problemEnvironment, r.finalizerName)
 	return r.updateBoth(ctx, problemEnvironment, ctrl.Result{})
 }
 
-func (r *ProblemEnvironmentReconciler) schedule(
+func (r *ProblemEnvironmentReconciler) instantiate(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	_ = log.FromContext(ctx)
 
-	workers := netconv1alpha1.WorkerList{}
-	if err := r.List(ctx, &workers); err != nil {
-		message := "failed to list Workers"
-		log.Error(err, message)
-		util.SetProblemEnvironmentCondition(
-			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionScheduled,
-			metav1.ConditionFalse,
-			"WorkersMissing",
-			message,
-		)
+	// TODO(proelbtn): instantiate
 
-		// TODO(proelbtn): try to adopt exponentialBackOff
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
-	}
-
-	if len(workers.Items) == 0 {
-		message := "there are no schedulable Workers"
-		log.Info(message)
-		util.SetProblemEnvironmentCondition(
-			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionScheduled,
-			metav1.ConditionFalse,
-			"WorkersNotSchedulable",
-			message,
-		)
-
-		// TODO(proelbtn): try to adopt exponentialBackOff
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
-	}
-
-	// TODO(proelbtn): more intelligent scheduling algorithm
-	problemEnvironment.Spec.WorkerName = workers.Items[0].Name
-
-	util.SetProblemEnvironmentCondition(
-		problemEnvironment,
-		netconv1alpha1.ProblemEnvironmentConditionScheduled,
-		metav1.ConditionTrue,
-		"", "",
-	)
-
+	controllerutil.AddFinalizer(problemEnvironment, r.finalizerName)
 	return r.updateBoth(ctx, problemEnvironment, ctrl.Result{})
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProblemEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.name = WorkerName
+	r.finalizerName = fmt.Sprintf("%s.problemenvironment.netcon.janog.gr.jp", WorkerName)
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&netconv1alpha1.ProblemEnvironment{}).
 		Complete(r)
