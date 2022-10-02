@@ -23,3 +23,19 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - problems
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - workers
+  verbs:
+  - get
+  - list
+  - watch

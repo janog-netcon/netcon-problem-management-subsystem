@@ -45,3 +45,17 @@ func SetProblemEnvironmentCondition(
 
 	problemEnvironment.Status.Conditions = conditions
 }
+
+func GetProblemEnvironmentCondition(
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	conditionType netconv1alpha1.ProblemEnvironmentConditionType,
+) metav1.ConditionStatus {
+	for i := range problemEnvironment.Status.Conditions {
+		condition := &problemEnvironment.Status.Conditions[i]
+		if condition.Type != string(conditionType) {
+			continue
+		}
+		return condition.Status
+	}
+	return metav1.ConditionUnknown
+}

@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,94 +34,61 @@ import (
 // TODO: fetch Worker name dynamically
 const WorkerName string = "worker001"
 
+const ProblemEnvironmentFinalizer string = "problemenvironment.netcon.janog.gr.jp"
+
 // ProblemEnvironmentReconciler reconciles a ProblemEnvironment object
 type ProblemEnvironmentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	name          string
-	finalizerName string
+	name string
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ProblemEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	ctx = r.setLoggerFor(ctx, req)
 	log := log.FromContext(ctx)
 
 	problemEnvironment := netconv1alpha1.ProblemEnvironment{}
 	if err := r.Get(ctx, req.NamespacedName, &problemEnvironment); err != nil {
-		log.V(1).Info("could not get ProblemEnvironment")
+		err = client.IgnoreNotFound(err)
+		if err != nil {
+			log.V(1).Info("could not get ProblemEnvironment")
+		}
 		return ctrl.Result{}, err
+	}
+
+	if scheduled := util.GetProblemEnvironmentCondition(
+		&problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionScheduled,
+	); scheduled != metav1.ConditionTrue {
+		log.V(1).Info("ProblemEnvironment isn't scheduled yet")
+		return ctrl.Result{}, nil
+	}
+
+	if problemEnvironment.Spec.WorkerName != r.name {
+		log.V(1).Info("ProblemEnvironment isn't assigned to me")
+		return ctrl.Result{}, nil
 	}
 
 	// check whether ProblemEnvironment is being deleted or not
 	if problemEnvironment.DeletionTimestamp != nil {
-		if controllerutil.ContainsFinalizer(&problemEnvironment, r.finalizerName) {
-			// ProblemEnvironment is assigned to this Worker, cleaning up
-			log.Info("ProblemEnvironment is being deleted, cleaning up instance")
-			return r.cleanup(ctx, &problemEnvironment)
-		}
-
-		// ProblemEnvironment is assigned to other Worker, ignoring
-		return ctrl.Result{}, nil
-	}
-
-	// now, we are reconciling for **alive** ProblemEnvironments
-	// check whether ProblemEnvironment is already assigned to any Worker
-	if problemEnvironment.Spec.WorkerName == "" {
-		log.V(1).Info("ProblemEnvironment isn't assigned to any Worker yet")
-		return ctrl.Result{}, nil
-	}
-
-	// now, we are reconciling for **scheduled** ProblemEnvironments
-	if problemEnvironment.Spec.WorkerName != r.name {
-		// in case that ProblemEnvironment is assigned to other Worker
-
-		if controllerutil.ContainsFinalizer(&problemEnvironment, r.finalizerName) {
-			log.Info(
-				"reassigned ProblemEnvironment to other Worker",
-				"newWorkerName",
-				problemEnvironment.Spec.WorkerName,
-			)
-			util.SetProblemEnvironmentCondition(
-				&problemEnvironment,
-				netconv1alpha1.ProblemEnvironmentConditionReady,
-				metav1.ConditionFalse,
-				"Rescheduling", "",
-			)
-
-			r.cleanup(ctx, &problemEnvironment)
-
-		}
-
-		return ctrl.Result{}, nil
-	}
-
-	switch len(problemEnvironment.Finalizers) {
-	case 0:
-		log.Info("scheduled ProblemEnvironment to this Worker")
-		return r.instantiate(ctx, &problemEnvironment)
-	case 1:
-		if !controllerutil.ContainsFinalizer(&problemEnvironment, r.finalizerName) {
-			log.Info("waiting old Worker for cleaning up ProblemEnvironment")
+		if !controllerutil.ContainsFinalizer(&problemEnvironment, ProblemEnvironmentFinalizer) {
+			log.Info("being deleted, but not instantiated, ignoring")
 			return ctrl.Result{}, nil
 		}
-		// TODO(proelbtn): watch instance
-		return ctrl.Result{}, nil
-	default:
-		// unknown state, it may just bug
-		err := fmt.Errorf("multiple finalizers are registered to ProblemEnvironment")
-		log.Error(err, "failed to instantiate ProblemEnvironment")
-		return ctrl.Result{}, err
-	}
-}
 
-func (r *ProblemEnvironmentReconciler) setLoggerFor(ctx context.Context, req ctrl.Request) context.Context {
-	return log.IntoContext(ctx, log.FromContext(ctx).WithValues(
-		"namespace", req.Namespace,
-		"name", req.Name,
-	))
+		log.Info("being deleted, cleaning up instance")
+		return r.cleanup(ctx, &problemEnvironment)
+	}
+
+	if !controllerutil.ContainsFinalizer(&problemEnvironment, ProblemEnvironmentFinalizer) {
+		controllerutil.AddFinalizer(&problemEnvironment, ProblemEnvironmentFinalizer)
+		return r.update(ctx, &problemEnvironment, ctrl.Result{})
+	}
+
+	log.Info("ensuring instance")
+	return r.ensureInstance(ctx, &problemEnvironment)
 }
 
 func (r *ProblemEnvironmentReconciler) update(
@@ -153,45 +119,42 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 	return ctrl.Result{}, nil
 }
 
-func (r *ProblemEnvironmentReconciler) updateBoth(
-	ctx context.Context,
-	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-	res ctrl.Result,
-) (ctrl.Result, error) {
-	if res, err := r.update(ctx, problemEnvironment, ctrl.Result{}); err != nil {
-		return res, err
-	}
-	return r.updateStatus(ctx, problemEnvironment, res)
-}
-
 func (r *ProblemEnvironmentReconciler) cleanup(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
 	// TODO(proelbtn): cleaning up instance
+	log.Info("ProblemEnvironment is cleaning up")
 
-	controllerutil.RemoveFinalizer(problemEnvironment, r.finalizerName)
-	return r.updateBoth(ctx, problemEnvironment, ctrl.Result{})
+	controllerutil.RemoveFinalizer(problemEnvironment, ProblemEnvironmentFinalizer)
+	return r.update(ctx, problemEnvironment, ctrl.Result{})
 }
 
-func (r *ProblemEnvironmentReconciler) instantiate(
+func (r *ProblemEnvironmentReconciler) ensureInstance(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	log := log.FromContext(ctx)
 
 	// TODO(proelbtn): instantiate
+	message := "ProblemEnvironment is instantiated"
+	log.Info(message)
+	util.SetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+		metav1.ConditionTrue,
+		"Instantiated",
+		message,
+	)
 
-	controllerutil.AddFinalizer(problemEnvironment, r.finalizerName)
-	return r.updateBoth(ctx, problemEnvironment, ctrl.Result{})
+	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProblemEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.name = WorkerName
-	r.finalizerName = fmt.Sprintf("%s.problemenvironment.netcon.janog.gr.jp", WorkerName)
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&netconv1alpha1.ProblemEnvironment{}).

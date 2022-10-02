@@ -1,3 +1,7 @@
+## 
+```
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+```
 
 ## How to deploy nclet (netcon-let)?
 
@@ -19,7 +23,7 @@ metadata:
 rules:
 - apiGroups: ["netcon.janog.gr.jp"]
   resources: ["*"]
-  verbs: ["get", "list", "watch", "create", "delete", "patch"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -72,7 +76,8 @@ $ ls -a
 .  ..  kubeconfig
 $ docker run -d \
     --name nclet \
+    --net host \
     -e KUBECONFIG=/etc/kubernetes/kubeconfig \
     -v $(pwd)/kubeconfig:/etc/kubernetes/kubeconfig \
-    proelbtn/netcon-pms-nclet:develop
+    proelbtn/netcon-pms-nclet:dev
 ```

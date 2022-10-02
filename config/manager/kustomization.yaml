@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: proelbtn/netcon-pms-controller-manager
-  newTag: develop
+  newTag: dev

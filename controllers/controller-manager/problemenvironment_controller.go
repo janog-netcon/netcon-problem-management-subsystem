@@ -39,43 +39,36 @@ type ProblemEnvironmentReconciler struct {
 
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problems,verbs=get;list;watch
+//+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ProblemEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	ctx = r.setLoggerFor(ctx, req)
 	log := log.FromContext(ctx)
 
 	problemEnvironment := netconv1alpha1.ProblemEnvironment{}
 	if err := r.Get(ctx, req.NamespacedName, &problemEnvironment); err != nil {
-		log.V(1).Info("could not get ProblemEnvironment")
+		err = client.IgnoreNotFound(err)
+		if err != nil {
+			log.V(1).Info("could not get ProblemEnvironment")
+		}
 		return ctrl.Result{}, err
 	}
 
 	if problemEnvironment.DeletionTimestamp != nil {
-		// there is nothing to do on ProblemEnvironment controller
+		log.Info("being deleted, ignoring")
+		// there is nothing to do when deleting ProblemEnvironment
 		return ctrl.Result{}, nil
 	}
 
-	if owners := problemEnvironment.GetOwnerReferences(); len(owners) == 0 {
-		return r.setOwnerReference(ctx, &problemEnvironment)
-	}
-
 	if problemEnvironment.Spec.WorkerName == "" {
-		//
+		log.Info("not scheduled yet, scheduling")
 		return r.schedule(ctx, &problemEnvironment)
 	}
 
-	// ProblemEnvironment is already scheduled
-	// so, there is nothing to do on ProblemEnvironment controller
-	return ctrl.Result{}, nil
-}
-
-func (r *ProblemEnvironmentReconciler) setLoggerFor(ctx context.Context, req ctrl.Request) context.Context {
-	return log.IntoContext(ctx, log.FromContext(ctx).WithValues(
-		"namespace", req.Namespace,
-		"name", req.Name,
-	))
+	log.Info("already scheduled, confirming schedule")
+	return r.confirmSchedule(ctx, &problemEnvironment)
 }
 
 func (r *ProblemEnvironmentReconciler) update(
@@ -101,61 +94,9 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 	if err := r.Status().Update(ctx, problemEnvironment); err != nil {
 		// TODO(proelbtn): try to adopt exponentialBackOff
 		log.Error(err, "failed to update status")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+		return ctrl.Result{RequeueAfter: 3 * time.Second}, err
 	}
 	return ctrl.Result{}, nil
-}
-
-func (r *ProblemEnvironmentReconciler) updateBoth(
-	ctx context.Context,
-	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-	res ctrl.Result,
-) (ctrl.Result, error) {
-	if res, err := r.update(ctx, problemEnvironment, ctrl.Result{}); err != nil {
-		return res, err
-	}
-	return r.updateStatus(ctx, problemEnvironment, res)
-}
-
-func (r *ProblemEnvironmentReconciler) setOwnerReference(
-	ctx context.Context,
-	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-
-	problem := netconv1alpha1.Problem{}
-	if err := r.Get(ctx, types.NamespacedName{
-		Namespace: problemEnvironment.Namespace,
-		Name:      problemEnvironment.Spec.ProblemRef.Name,
-	}, &problem); err != nil {
-		message := "failed to find problem referenced by .spec.problemRef.Name"
-		log.Error(err, message)
-		util.SetProblemEnvironmentCondition(
-			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionInitialized,
-			metav1.ConditionFalse,
-			"ProblemMissing",
-			message,
-		)
-
-		// TODO(proelbtn): try to adopt exponentialBackOff
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
-	}
-
-	// TODO(proelbtn): is it really okay to use SetControllerReference?
-	if err := ctrl.SetControllerReference(&problem, problemEnvironment, r.Scheme); err != nil {
-		log.Error(err, "failed to set controller reference")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
-	}
-
-	util.SetProblemEnvironmentCondition(
-		problemEnvironment,
-		netconv1alpha1.ProblemEnvironmentConditionInitialized,
-		metav1.ConditionTrue,
-		"", "",
-	)
-
-	return r.updateBoth(ctx, problemEnvironment, ctrl.Result{})
 }
 
 func (r *ProblemEnvironmentReconciler) schedule(
@@ -164,6 +105,7 @@ func (r *ProblemEnvironmentReconciler) schedule(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
+	log.V(1).Info("fetching Worker list for scheduling")
 	workers := netconv1alpha1.WorkerList{}
 	if err := r.List(ctx, &workers); err != nil {
 		message := "failed to list Workers"
@@ -198,14 +140,43 @@ func (r *ProblemEnvironmentReconciler) schedule(
 	// TODO(proelbtn): more intelligent scheduling algorithm
 	problemEnvironment.Spec.WorkerName = workers.Items[0].Name
 
+	log.Info("scheduled", "newWorkerName", problemEnvironment.Spec.WorkerName)
+	return r.update(ctx, problemEnvironment, ctrl.Result{})
+}
+
+func (r *ProblemEnvironmentReconciler) confirmSchedule(
+	ctx context.Context,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
+	log.V(1).Info("fetching Worker scheduled")
+	worker := netconv1alpha1.Worker{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Name: problemEnvironment.Spec.WorkerName,
+	}, &worker); err != nil {
+		message := "failed to get Worker"
+		log.Error(err, message)
+		util.SetProblemEnvironmentCondition(
+			problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionScheduled,
+			metav1.ConditionFalse,
+			"WorkersMissing",
+			message,
+		)
+
+		// TODO(proelbtn): try to adopt exponentialBackOff
+		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
+	}
+
+	log.Info("confirmed", "workerName", problemEnvironment.Spec.WorkerName)
 	util.SetProblemEnvironmentCondition(
 		problemEnvironment,
 		netconv1alpha1.ProblemEnvironmentConditionScheduled,
 		metav1.ConditionTrue,
-		"", "",
+		"Scheduled", "ProblemEnvironment is assigned to Worker",
 	)
-
-	return r.updateBoth(ctx, problemEnvironment, ctrl.Result{})
+	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
 }
 
 // SetupWithManager sets up the controller with the Manager.

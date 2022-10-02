@@ -67,6 +67,10 @@ func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) error {
 
 	or := old.(*ProblemEnvironment)
 
+	if or.Spec.WorkerName != "" && r.Spec.WorkerName != or.Spec.WorkerName {
+		return fmt.Errorf(".spec.workerName: workerName can't be updated after scheduling")
+	}
+
 	if !reflect.DeepEqual(r.Spec.ProblemRef, or.Spec.ProblemRef) {
 		return fmt.Errorf(".spec.problemRef: problemRef can't be updated for consistency")
 	}
