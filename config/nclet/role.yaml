@@ -1,0 +1,37 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: nclet-role
+rules:
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - problemenvironments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - problemenvironments/status
+  verbs:
+  - get
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - problems
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - problems/status
+  verbs:
+  - get
+  - patch
+  - update
