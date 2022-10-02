@@ -10,19 +10,11 @@ rules:
   resources:
   - problemenvironments
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch
   - update
   - watch
-- apiGroups:
-  - netcon.janog.gr.jp
-  resources:
-  - problemenvironments/finalizers
-  verbs:
-  - update
 - apiGroups:
   - netcon.janog.gr.jp
   resources:

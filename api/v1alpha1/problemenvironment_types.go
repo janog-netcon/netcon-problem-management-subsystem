@@ -20,8 +20,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ProblemEnvironmentConditionType string
+
 const (
-	CertificateConditionReady string = "Ready"
+	ProblemEnvironmentConditionInitialized ProblemEnvironmentConditionType = "Initialized"
+
+	ProblemEnvironmentConditionScheduled ProblemEnvironmentConditionType = "Scheduled"
+
+	ProblemEnvironmentConditionReady ProblemEnvironmentConditionType = "Ready"
 )
 
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
