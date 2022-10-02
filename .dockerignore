@@ -2,3 +2,6 @@
 # Ignore build and test binaries.
 bin/
 testbin/
+
+cmd/**/Dockerfile
+cmd/**/sub.mk

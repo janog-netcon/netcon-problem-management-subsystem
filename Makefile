@@ -74,6 +74,12 @@ build: generate fmt vet ## Build manager binary.
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
+.PHONY: docker-build
+docker-build: controller-manager-docker-build nclet-docker-build
+
+.PHONY: docker-push
+docker-push: controller-manager-docker-push nclet-docker-push
+
 ##@ Deployment
 
 ifndef ignore-not-found
