@@ -1,75 +1,39 @@
 ## 
+
+## Deploy
+
+### Prerequisite
+
+* Kubernetes cluster
+  1. This cluster needs to be accessible from Worker nodes
+    * nclet needs to communicate with this cluster to work successfully
+  2. Cert-manager needs to be installed on this cluster
+    * it is needed to issue self-signed certificates and inject them to some manifests
+  3. Optionally, ArgoCD may be installed on this cluster if needed
+    * it helps us manage Kubernetes manifests
+* Worker nodes
+  1. Docker needs to be installed on Worker nodes
+    * nclet will run as Docker container
+
+You can install cert-manager with the following command:
+
 ```
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
 ```
 
-## How to deploy nclet (netcon-let)?
+### central components
 
-At first, we need to create ServiceAccount for nclet.
+You can install central components just by executing `make deploy` on the project root.
 
-```
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  namespace: netcon
-  name: nclet
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  namespace: netcon
-  name: system:nclet
-rules:
-- apiGroups: ["netcon.janog.gr.jp"]
-  resources: ["*"]
-  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  namespace: netcon
-  name: system:nclet:nclet
-subjects:
-- kind: ServiceAccount
-  namespace: netcon
-  name: nclet
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:nclet
-```
+### nclet
+
+Before deploying nclet to Worker node, you need to create kubeconfig file for nclet. You can create it with `./scripts/fetch_kubeconfig_for_kubelet.sh`.
 
 ```
-$ kubectl -n netcon get secret nclet-token-4gqlr -o yaml
-apiVersion: v1
-data:
-  token: {{ b64encode(token) }}
-kind: Secret
-metadata:
-  name: nclet-token-4gqlr
-  namespace: netcon
-type: kubernetes.io/service-account-token
+$ ./scripts/fetch_kubeconfig_for_kubelet.sh
 ```
 
-```
-kind: Config
-apiVersion: v1
-current-context: netcon
-clusters
-- name: netcon-cplane
-  cluster:
-    server: {{ server_address }}
-contexts:
-- name: netcon
-  context:
-    cluster: netcon-cplane
-    user: nclet
-users:
-- name: nclet
-  user:
-    token: {{ token }}
-```
+After creating kubeconfig, you can deploy nclet with the following commands. Note that they expect to be executed on Worker node.
 
 ```
 $ ls -a
@@ -81,11 +45,4 @@ $ docker run -d \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v $(pwd)/kubeconfig:/etc/kubernetes/kubeconfig \
     proelbtn/netcon-pms-nclet:dev
-```
-
-```
-sudo yum-config-manager --add-repo=https://yum.fury.io/netdevops/ && \
-echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/yum.fury.io_netdevops_.repo
-
-sudo yum install containerlab
 ```
