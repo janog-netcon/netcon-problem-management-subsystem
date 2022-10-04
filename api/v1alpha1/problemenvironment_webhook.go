@@ -71,7 +71,7 @@ func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) error {
 		return fmt.Errorf(".spec.workerName: workerName can't be updated after scheduling")
 	}
 
-	if !reflect.DeepEqual(r.Spec.ContainerLabManifest, or.Spec.ContainerLabManifest) {
+	if !reflect.DeepEqual(r.Spec.TopologyFile, or.Spec.TopologyFile) {
 		return fmt.Errorf(".spec.containerLabManifest: containerLabManifest can't be updated")
 	}
 

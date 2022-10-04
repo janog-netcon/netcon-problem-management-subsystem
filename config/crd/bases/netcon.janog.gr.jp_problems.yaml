@@ -43,7 +43,7 @@ spec:
                     description: ProblemEnvironmentSpec defines the desired state
                       of ProblemEnvironment
                     properties:
-                      configMapRef:
+                      topologyFile:
                         properties:
                           configMapRef:
                             properties:
@@ -61,7 +61,7 @@ spec:
                       workerName:
                         type: string
                     required:
-                    - configMapRef
+                    - topologyFile
                     type: object
                 type: object
             required:

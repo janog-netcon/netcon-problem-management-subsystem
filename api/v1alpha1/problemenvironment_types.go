@@ -32,7 +32,7 @@ const (
 
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
 type ProblemEnvironmentSpec struct {
-	ContainerLabManifest FileSource `json:"configMapRef"`
+	TopologyFile FileSource `json:"topologyFile"`
 
 	WorkerName string `json:"workerName,omitempty"`
 }
