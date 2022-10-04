@@ -36,17 +36,25 @@ spec:
           spec:
             description: ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
             properties:
-              problemRef:
+              configMapRef:
                 properties:
-                  name:
-                    type: string
+                  configMapRef:
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
                 required:
-                - name
+                - configMapRef
                 type: object
               workerName:
                 type: string
             required:
-            - problemRef
+            - configMapRef
             type: object
           status:
             description: ProblemEnvironmentStatus defines the observed state of ProblemEnvironment

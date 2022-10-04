@@ -32,12 +32,17 @@ const (
 
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
 type ProblemEnvironmentSpec struct {
-	ProblemRef ProblemReference `json:"problemRef"`
+	ContainerLabManifest FileSource `json:"configMapRef"`
 
 	WorkerName string `json:"workerName,omitempty"`
 }
 
-type ProblemReference struct {
+type FileSource struct {
+	ConfigMapRef ConfigMapFileSource `json:"configMapRef"`
+}
+
+type ConfigMapFileSource struct {
+	Key  string `json:"key"`
 	Name string `json:"name"`
 }
 

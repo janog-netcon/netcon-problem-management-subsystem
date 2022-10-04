@@ -74,7 +74,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	driver := drivers.NewNoopProblemEnvironmentDriver()
+	driver := drivers.NewContainerLabProblemEnvironmentDriver()
 
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client: mgr.GetClient(),

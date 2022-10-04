@@ -17,9 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"fmt"
-	"reflect"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -64,12 +61,6 @@ func (r *Problem) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Problem) ValidateUpdate(old runtime.Object) error {
 	problemlog.Info("validate update", "name", r.Name)
-
-	or := old.(*Problem)
-
-	if !reflect.DeepEqual(r.Spec.ContainerLabManifest, or.Spec.ContainerLabManifest) {
-		return fmt.Errorf(".spec.containerLabManifest: containerLabManifest can't be updated for consistency")
-	}
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil

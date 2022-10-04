@@ -22,16 +22,13 @@ import (
 
 // ProblemSpec defines the desired state of Problem
 type ProblemSpec struct {
-	ContainerLabManifest FileSource `json:"containerLabManifest"`
+	Template *ProblemEnvironmentTemplate `json:"template"`
 }
 
-type FileSource struct {
-	ConfigMapRef ConfigMapFileSource `json:"configMapRef"`
-}
+type ProblemEnvironmentTemplate struct {
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-type ConfigMapFileSource struct {
-	Key  string `json:"key"`
-	Name string `json:"name"`
+	Spec ProblemEnvironmentSpec `json:"spec,omitempty"`
 }
 
 //+kubebuilder:object:root=true
