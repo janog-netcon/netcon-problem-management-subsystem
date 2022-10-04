@@ -6,6 +6,22 @@ metadata:
   name: nclet-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - workers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - netcon.janog.gr.jp
   resources:
   - problemenvironments
@@ -13,24 +29,12 @@ rules:
   - get
   - list
   - watch
+  - patch
+  - update
 - apiGroups:
   - netcon.janog.gr.jp
   resources:
   - problemenvironments/status
-  verbs:
-  - get
-- apiGroups:
-  - netcon.janog.gr.jp
-  resources:
-  - problems
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - netcon.janog.gr.jp
-  resources:
-  - problems/status
   verbs:
   - get
   - patch

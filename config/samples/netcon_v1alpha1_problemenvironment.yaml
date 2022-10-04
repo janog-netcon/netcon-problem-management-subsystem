@@ -4,5 +4,7 @@ metadata:
   namespace: netcon
   name: problemenvironment001
 spec:
-  problemRef:
-    name: problem001
+  topologyFile:
+    configMapRef:
+      name: hoge
+      key: fuga

@@ -11,6 +11,7 @@ import (
 type ProblemEnvironmentStatus string
 
 const (
+	StatusUnknown     ProblemEnvironmentStatus = "Unknown"
 	StatusUp          ProblemEnvironmentStatus = "Up"
 	StatusDown        ProblemEnvironmentStatus = "Down"
 	StatusPartiallyUp ProblemEnvironmentStatus = "PartiallyUp"
