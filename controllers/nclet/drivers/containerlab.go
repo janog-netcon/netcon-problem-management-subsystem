@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 
 	corev1 "k8s.io/api/core/v1"
@@ -49,22 +50,57 @@ func (d *ContainerLabProblemEnvironmentDriver) delete(path string) (bool, error)
 	return true, os.Remove(path)
 }
 
+func (d *ContainerLabProblemEnvironmentDriver) getDirectoryPathFor(
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) string {
+	return path.Join("data", problemEnvironment.Name)
+}
+
+func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
+	ctx context.Context,
+	reader client.Reader,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) ([]byte, error) {
+	log := log.FromContext(ctx)
+
+	configMap := corev1.ConfigMap{}
+	if err := reader.Get(ctx, types.NamespacedName{
+		Namespace: problemEnvironment.Namespace,
+		Name:      problemEnvironment.Spec.TopologyFile.ConfigMapRef.Name,
+	}, &configMap); err != nil {
+		log.Error(err, "failed to get topology file")
+		return nil, err
+	}
+
+	topology, ok := configMap.Data[problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key]
+	if !ok {
+		err := fmt.Errorf(
+			"ConfigMap found, but key `%s` missing",
+			problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key,
+		)
+		log.Error(err, "failed to get topology file")
+		return nil, err
+	}
+
+	return []byte(topology), nil
+}
+
 // Check implements ProblemEnvironmentDriver
 func (d *ContainerLabProblemEnvironmentDriver) Check(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) (ProblemEnvironmentStatus, error) {
-	rootDirectoryPath := path.Join("data", "topologies", problemEnvironment.Name)
-	if err := d.ensureDirectory(rootDirectoryPath); err != nil {
+	directoryPath := d.getDirectoryPathFor(&problemEnvironment)
+	if err := d.ensureDirectory(directoryPath); err != nil {
 		return StatusUnknown, err
 	}
 
-	if !d.fileExists(rootDirectoryPath) {
+	if !d.fileExists(directoryPath) {
 		return StatusDown, nil
 	}
 
-	return StatusDown, nil
+	return StatusUp, nil
 }
 
 // Deploy implements ProblemEnvironmentDriver
@@ -75,35 +111,27 @@ func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 ) error {
 	log := log.FromContext(ctx)
 
-	configMap := corev1.ConfigMap{}
-	if err := reader.Get(ctx, types.NamespacedName{
-		Namespace: problemEnvironment.Namespace,
-		Name:      problemEnvironment.Spec.TopologyFile.ConfigMapRef.Name,
-	}, &configMap); err != nil {
+	topologyFile, err := d.getTopologyFileFor(ctx, reader, &problemEnvironment)
+	if err != nil {
 		return err
 	}
 
-	topologyFile, ok := configMap.Data[problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key]
-	if !ok {
-		err := fmt.Errorf(
-			"ConfigMap found, but key `%s` missing",
-			problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key,
-		)
-		log.Error(err, "failed to deploy")
+	directoryPath := d.getDirectoryPathFor(&problemEnvironment)
+	if err := d.ensureDirectory(directoryPath); err != nil {
+		log.Error(err, "failed to create directory")
 		return err
 	}
 
-	rootDirectoryPath := path.Join("data", problemEnvironment.Name)
-	if err := d.ensureDirectory(rootDirectoryPath); err != nil {
-		return err
-	}
-
-	topologyFilePath := path.Join(rootDirectoryPath, "manifest.yaml")
+	topologyFilePath := path.Join(directoryPath, "manifest.yml")
 	if _, err := d.createOrUpdateFile(topologyFilePath, []byte(topologyFile)); err != nil {
+		log.Error(err, "failed to create topology file")
 		return err
 	}
 
-	return nil
+	cmd := exec.CommandContext(ctx, "/usr/bin/clab", "-t", "manifest.yml", "deploy")
+	cmd.Dir = directoryPath
+
+	return cmd.Run()
 }
 
 // Destroy implements ProblemEnvironmentDriver
@@ -112,11 +140,18 @@ func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
-	rootDirectoryPath := path.Join("data", "topologies", problemEnvironment.Name)
-	if err := d.ensureDirectory(rootDirectoryPath); err != nil {
+	directoryPath := d.getDirectoryPathFor(&problemEnvironment)
+	if err := d.ensureDirectory(directoryPath); err != nil {
 		return err
 	}
 
-	_, err := d.delete(rootDirectoryPath)
+	cmd := exec.CommandContext(ctx, "/usr/bin/clab", "-t", "manifest.yml", "destroy")
+	cmd.Dir = directoryPath
+
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	_, err := d.delete(directoryPath)
 	return err
 }

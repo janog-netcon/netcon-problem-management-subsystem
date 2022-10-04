@@ -101,9 +101,8 @@ func (r *ProblemEnvironmentReconciler) update(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 	if err := r.Update(ctx, problemEnvironment); err != nil {
-		// TODO(proelbtn): try to adopt exponentialBackOff
 		log.Error(err, "failed to update")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
@@ -115,9 +114,8 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 	if err := r.Status().Update(ctx, problemEnvironment); err != nil {
-		// TODO(proelbtn): try to adopt exponentialBackOff
 		log.Error(err, "failed to update status")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
