@@ -12,6 +12,8 @@ spec:
     kind: Problem
     listKind: ProblemList
     plural: problems
+    shortNames:
+    - prob
     singular: problem
   scope: Namespaced
   versions:

@@ -12,6 +12,8 @@ spec:
     kind: ProblemEnvironment
     listKind: ProblemEnvironmentList
     plural: problemenvironments
+    shortNames:
+    - probenv
     singular: problemenvironment
   scope: Namespaced
   versions:

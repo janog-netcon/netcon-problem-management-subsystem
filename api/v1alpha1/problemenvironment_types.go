@@ -53,6 +53,7 @@ type ProblemEnvironmentStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:shortName=probenv
 
 // ProblemEnvironment is the Schema for the problemenvironments API
 type ProblemEnvironment struct {

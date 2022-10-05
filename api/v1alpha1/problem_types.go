@@ -32,6 +32,7 @@ type ProblemEnvironmentTemplate struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:shortName=prob
 
 // Problem is the Schema for the problems API
 type Problem struct {
