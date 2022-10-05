@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: netcon
-  name: prob-PRO-001 
+  name: pro-001 
 data:
   manifest.yml: |
     topology:
@@ -17,35 +17,64 @@ data:
       links:
         - endpoints: ["n1:eth1","n2:eth1"]
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: netcon
+  name: pro-002
+data:
+  manifest.yml: |
+    topology:
+      nodes:
+        n1:
+          kind: linux
+          image: nicolaka/netshoot:latest
+        n2:
+          kind: hogehoge
+          image: nicolaka/netshoot:latest
+      links:
+        - endpoints: ["n1:eth1","n2:eth1"]
+---
 apiVersion: netcon.janog.gr.jp/v1alpha1
 kind: ProblemEnvironment
 metadata:
   namespace: netcon
-  name: prob-PRO-001-a0e832
+  name: pro-001-a0e832
 spec:
   topologyFile:
     configMapRef:
-      name: prob-PRO-001
+      name: pro-001
       key: manifest.yml
 ---
 apiVersion: netcon.janog.gr.jp/v1alpha1
 kind: ProblemEnvironment
 metadata:
   namespace: netcon
-  name: prob-PRO-001-c9f16h
+  name: pro-001-c9f16h
 spec:
   topologyFile:
     configMapRef:
-      name: prob-PRO-001
+      name: pro-001
       key: manifest.yml
 ---
 apiVersion: netcon.janog.gr.jp/v1alpha1
 kind: ProblemEnvironment
 metadata:
   namespace: netcon
-  name: prob-PRO-001-b3f8ba
+  name: pro-002-b3f8ba
 spec:
   topologyFile:
     configMapRef:
-      name: prob-PRO-001
+      name: pro-002
+      key: manifest.yml
+---
+apiVersion: netcon.janog.gr.jp/v1alpha1
+kind: ProblemEnvironment
+metadata:
+  namespace: netcon
+  name: pro-002-afb81d
+spec:
+  topologyFile:
+    configMapRef:
+      name: pro-002
       key: manifest.yml
