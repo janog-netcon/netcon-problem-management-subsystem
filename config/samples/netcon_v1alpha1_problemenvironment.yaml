@@ -3,10 +3,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   namespace: netcon
-  name: problemenvironment001
+  name: prob-PRO-001 
 data:
   manifest.yml: |
-    name: problemenvironment001
     topology:
       nodes:
         n1:
@@ -22,9 +21,31 @@ apiVersion: netcon.janog.gr.jp/v1alpha1
 kind: ProblemEnvironment
 metadata:
   namespace: netcon
-  name: problemenvironment001
+  name: prob-PRO-001-a0e832
 spec:
   topologyFile:
     configMapRef:
-      name: problemenvironment001
+      name: prob-PRO-001
+      key: manifest.yml
+---
+apiVersion: netcon.janog.gr.jp/v1alpha1
+kind: ProblemEnvironment
+metadata:
+  namespace: netcon
+  name: prob-PRO-001-c9f16h
+spec:
+  topologyFile:
+    configMapRef:
+      name: prob-PRO-001
+      key: manifest.yml
+---
+apiVersion: netcon.janog.gr.jp/v1alpha1
+kind: ProblemEnvironment
+metadata:
+  namespace: netcon
+  name: prob-PRO-001-b3f8ba
+spec:
+  topologyFile:
+    configMapRef:
+      name: prob-PRO-001
       key: manifest.yml
