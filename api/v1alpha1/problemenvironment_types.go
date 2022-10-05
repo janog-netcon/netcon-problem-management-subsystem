@@ -23,8 +23,6 @@ import (
 type ProblemEnvironmentConditionType string
 
 const (
-	ProblemEnvironmentConditionInitialized ProblemEnvironmentConditionType = "Initialized"
-
 	ProblemEnvironmentConditionScheduled ProblemEnvironmentConditionType = "Scheduled"
 
 	ProblemEnvironmentConditionReady ProblemEnvironmentConditionType = "Ready"
@@ -54,6 +52,8 @@ type ProblemEnvironmentStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=probenv
+//+kubebuilder:printcolumn:name=SCHEDULED,type=string,JSONPath=.status.conditions[?(@.type=="Scheduled")].status
+//+kubebuilder:printcolumn:name=READY,type=string,JSONPath=.status.conditions[?(@.type=="Ready")].status
 
 // ProblemEnvironment is the Schema for the problemenvironments API
 type ProblemEnvironment struct {

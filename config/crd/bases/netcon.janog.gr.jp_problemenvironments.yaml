@@ -17,7 +17,14 @@ spec:
     singular: problemenvironment
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Scheduled")].status
+      name: SCHEDULED
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: READY
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ProblemEnvironment is the Schema for the problemenvironments
