@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path"
 
-	"github.com/srl-labs/containerlab/clab"
 	"gopkg.in/yaml.v2"
 
 	corev1 "k8s.io/api/core/v1"
@@ -101,8 +100,8 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 		return nil, err
 	}
 
-	topologyConfig := clab.Config{}
-	if err := yaml.UnmarshalStrict([]byte(topology), &topologyConfig); err != nil {
+	topologyConfig := Config{}
+	if err := yaml.Unmarshal([]byte(topology), &topologyConfig); err != nil {
 		return nil, err
 	}
 
