@@ -47,7 +47,7 @@ func (d *ContainerLabProblemEnvironmentDriver) delete(path string) (bool, error)
 	if !d.fileExists(path) {
 		return false, nil
 	}
-	return true, os.Remove(path)
+	return true, os.RemoveAll(path)
 }
 
 func (d *ContainerLabProblemEnvironmentDriver) getDirectoryPathFor(
@@ -92,10 +92,6 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) (ProblemEnvironmentStatus, error) {
 	directoryPath := d.getDirectoryPathFor(&problemEnvironment)
-	if err := d.ensureDirectory(directoryPath); err != nil {
-		return StatusUnknown, err
-	}
-
 	if !d.fileExists(directoryPath) {
 		return StatusDown, nil
 	}
@@ -117,12 +113,14 @@ func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 	}
 
 	directoryPath := d.getDirectoryPathFor(&problemEnvironment)
+	log.V(1).Info("ensuring directory for ProblemEnvironment", "path", directoryPath)
 	if err := d.ensureDirectory(directoryPath); err != nil {
 		log.Error(err, "failed to create directory")
 		return err
 	}
 
 	topologyFilePath := path.Join(directoryPath, "manifest.yml")
+	log.V(1).Info("creating topology file", "path", topologyFilePath)
 	if _, err := d.createOrUpdateFile(topologyFilePath, []byte(topologyFile)); err != nil {
 		log.Error(err, "failed to create topology file")
 		return err
@@ -145,11 +143,15 @@ func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "/usr/bin/clab", "-t", "manifest.yml", "destroy")
-	cmd.Dir = directoryPath
+	topologyFilePath := path.Join(directoryPath, "manifest.yml")
 
-	if err := cmd.Run(); err != nil {
-		return err
+	if d.fileExists(topologyFilePath) {
+		cmd := exec.CommandContext(ctx, "/usr/bin/clab", "-t", "manifest.yml", "destroy")
+		cmd.Dir = directoryPath
+
+		if err := cmd.Run(); err != nil {
+			return err
+		}
 	}
 
 	_, err := d.delete(directoryPath)

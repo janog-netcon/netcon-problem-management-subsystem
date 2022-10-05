@@ -27,11 +27,12 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o nc
 FROM nicolaka/netshoot:v0.7
 WORKDIR /
 
+RUN apk add docker-cli
+
 RUN wget https://github.com/srl-labs/containerlab/releases/download/v0.32.0/containerlab_0.32.0_linux_amd64.apk -O /tmp/containerlab.apk && \
     apk add --allow-untrusted /tmp/containerlab.apk && \
     rm -rf /tmp/containerlab.apk
 
 COPY --from=builder /workspace/nclet .
-USER 65532:65532
 
 ENTRYPOINT ["/nclet"]

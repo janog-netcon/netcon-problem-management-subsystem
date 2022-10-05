@@ -90,6 +90,15 @@ func (r *ProblemEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return r.update(ctx, &problemEnvironment, ctrl.Result{})
 	}
 
+	// once if deploy is failed, nclet stop to handle it
+	if util.GetProblemEnvironmentCondition(
+		&problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+	) == metav1.ConditionFalse {
+		log.Info("skipping to deploy because deploy was failed")
+		return ctrl.Result{}, nil
+	}
+
 	log.Info("ensuring instance")
 	return r.ensureInstance(ctx, &problemEnvironment)
 }
@@ -129,6 +138,7 @@ func (r *ProblemEnvironmentReconciler) cleanup(
 	log.Info("ProblemEnvironment is cleaning up")
 	if err := r.driver.Destroy(ctx, r.Client, *problemEnvironment); err != nil {
 		message := "failed to destroy ProblemEnvironment"
+		log.Error(err, message)
 		util.SetProblemEnvironmentCondition(
 			problemEnvironment,
 			netconv1alpha1.ProblemEnvironmentConditionReady,
@@ -167,20 +177,6 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 	log.V(1).Info("checked the status of ProblemEnvironment", "status", status)
 
 	switch status {
-	case drivers.StatusPartiallyUp:
-		if err := r.driver.Deploy(ctx, r.Client, *problemEnvironment); err != nil {
-			message := "failed to destroy ProblemEnvironment"
-			log.Error(err, message)
-			util.SetProblemEnvironmentCondition(
-				problemEnvironment,
-				netconv1alpha1.ProblemEnvironmentConditionReady,
-				metav1.ConditionFalse,
-				"DestroyFailed",
-				message,
-			)
-			return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
-		}
-		fallthrough
 	case drivers.StatusDown:
 		if err := r.driver.Deploy(ctx, r.Client, *problemEnvironment); err != nil {
 			message := "failed to deploy ProblemEnvironment"
