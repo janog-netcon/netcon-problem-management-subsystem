@@ -8,6 +8,9 @@ import (
 	"os/exec"
 	"path"
 
+	"github.com/srl-labs/containerlab/clab"
+	"gopkg.in/yaml.v2"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,7 +59,7 @@ func (d *ContainerLabProblemEnvironmentDriver) getDirectoryPathFor(
 	return path.Join("data", problemEnvironment.Name)
 }
 
-func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
+func (d *ContainerLabProblemEnvironmentDriver) loadTopologyFile(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
@@ -68,7 +71,7 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 		Namespace: problemEnvironment.Namespace,
 		Name:      problemEnvironment.Spec.TopologyFile.ConfigMapRef.Name,
 	}, &configMap); err != nil {
-		log.Error(err, "failed to get topology file")
+		log.Error(err, "failed to load topology file")
 		return nil, err
 	}
 
@@ -78,11 +81,34 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 			"ConfigMap found, but key `%s` missing",
 			problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key,
 		)
-		log.Error(err, "failed to get topology file")
+		log.Error(err, "failed to load topology file")
 		return nil, err
 	}
 
 	return []byte(topology), nil
+}
+
+func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
+	ctx context.Context,
+	reader client.Reader,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) ([]byte, error) {
+	log := log.FromContext(ctx)
+
+	topology, err := d.loadTopologyFile(ctx, reader, problemEnvironment)
+	if err != nil {
+		log.Error(err, "failed to load topology file")
+		return nil, err
+	}
+
+	topologyConfig := clab.Config{}
+	if err := yaml.UnmarshalStrict([]byte(topology), &topologyConfig); err != nil {
+		return nil, err
+	}
+
+	topologyConfig.Name = problemEnvironment.Name
+
+	return yaml.Marshal(topologyConfig)
 }
 
 // Check implements ProblemEnvironmentDriver
