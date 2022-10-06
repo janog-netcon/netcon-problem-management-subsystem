@@ -1,4 +1,39 @@
-## 
+## Development Environment
+
+### Golang
+
+```bash
+wget https://go.dev/dl/go1.19.2.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.19.2.linux-amd64.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+. ~/.bashrc
+```
+
+## Docker
+
+```bash
+curl -L get.docker.com | sudo sh
+sudo usermod -aG docker "$(id -un)"
+```
+
+### kind
+
+```bash
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.16.0/kind-linux-amd64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
+```
+
+### kubectl
+
+```bash
+curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl && sudo mv kubectl /usr/local/bin
+```
+
+```bash
+kind create cluster
+```
 
 ## Deploy
 
