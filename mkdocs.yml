@@ -1,0 +1,7 @@
+site_name: netcon-problem-management-subsystem
+theme:
+  name: material
+  features:
+    - navigation.tabs
+nav:
+  - Development Environment: ./devenv.md

@@ -26,3 +26,9 @@ Dockerfile.cross
 *~
 
 /main.go
+<<<<<<< HEAD
+=======
+kubeconfig
+/data
+/site
+>>>>>>> ff9c950... Update documentation
