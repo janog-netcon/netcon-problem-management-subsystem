@@ -10,13 +10,10 @@ controller-manager-docker-build: test ## Build docker image with the manager.
 controller-manager-docker-push: ## Push docker image with the manager.
 	docker push ${CONTROLLER_MANAGER_IMG}
 
-<<<<<<< HEAD
-=======
 .PHONY: controller-manager-kind-push
 controller-manager-kind-push: ## Push docker image to kind cluster
 	kind load docker-image ${CONTROLLER_MANAGER_IMG}
 
->>>>>>> ff9c950... Update documentation
 .PHONY: docker-buildx
 controller-manager-docker-buildx: test ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
