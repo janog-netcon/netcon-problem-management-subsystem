@@ -10,6 +10,7 @@ rules:
   resources:
   - problemenvironments
   verbs:
+  - create
   - get
   - list
   - patch
@@ -30,7 +31,17 @@ rules:
   verbs:
   - get
   - list
+  - patch
+  - update
   - watch
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - problems/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - netcon.janog.gr.jp
   resources:
