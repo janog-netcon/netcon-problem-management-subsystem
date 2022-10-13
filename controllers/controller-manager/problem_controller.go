@@ -39,7 +39,7 @@ type ProblemReconciler struct {
 }
 
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problems,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=get;list;watch;create
+//+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problems/status,verbs=get;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -57,26 +57,8 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if problem.DeletionTimestamp != nil {
-		// TODO: 子のリソース(ProblemEnviroiment) を取して、子をすべて殺して自分も死ぬ
-		// FYI: 親子関係を持つようなリソースについては、 Owner Refference という仕組みを使って削除することが推奨される
-		//      Owner Refference は子を皆殺ししたことを確認してから、自死する
-
 		return ctrl.Result{}, nil
 	}
-
-	// kind: ProblemEnvironment
-	// metadata:
-	//   name: prob001-001
-	//   labels:
-	//     problemName: prob001
-
-	// kind: ProblemEnvironment
-	// metadata:
-	//   name: prob001-002
-	//   labels:
-	//     problemName: prob001
-
-	// => len(problemEnvironments.Items) == 2
 
 	problemName := client.MatchingLabels{KeyProblemName: problem.Name}
 	problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
@@ -112,7 +94,12 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 		log.Info("created ProblemEnvironment")
 	} else if problem.Spec.Replicas < len(problemEnvironments.Items) {
-		// TODO: 多すぎるので、減産
+		extraProblemEnv := len(problemEnvironments.Items) - problem.Spec.Replicas
+		for i := 0; i < extraProblemEnv; i++ {
+			if err := r.Delete(ctx, &problemEnvironments.Items[i]); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	return ctrl.Result{}, nil
