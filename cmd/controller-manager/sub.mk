@@ -1,4 +1,4 @@
-CONTROLLER_MANAGER_IMG ?= proelbtn/netcon-pms-controller-manager:dev
+CONTROLLER_MANAGER_IMG ?= netcon-pms-controller-manager:dev
 
 ##@ Build: Controller Manager
 

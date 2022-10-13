@@ -1,4 +1,4 @@
-NCLET_IMG ?= proelbtn/netcon-pms-nclet:dev
+NCLET_IMG ?= netcon-pms-nclet:dev
 
 ##@ Build: nclet
 
