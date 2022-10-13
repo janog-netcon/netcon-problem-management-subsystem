@@ -30,7 +30,7 @@ data:
           kind: linux
           image: nicolaka/netshoot:latest
         n2:
-          kind: hogehoge
+          kind: linux
           image: nicolaka/netshoot:latest
       links:
         - endpoints: ["n1:eth1","n2:eth1"]

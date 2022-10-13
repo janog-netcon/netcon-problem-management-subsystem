@@ -4,10 +4,17 @@ This page describes how to set up a development environment like the following.
 
 ![./devenv.svg](./devenv.svg)
 
+## Prerequisites
+
+* You need to prepare Linux VM (Ubuntu 22.04 is preferable)
+* You need to install `build-essential`. 
+
 ## Installing prerequisites
 
 To set up a development environment, you need to install the following items:
 
+* Golang
+* Docker
 * kind
 * kubectl
 
@@ -72,7 +79,7 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 Then, you can build and install controller-manager with these commands.
 
 ```
-make controller-manager-docker-build
+make controller-manager-docker-build nclet-docker-build
 make controller-manager-kind-push
 ```
 
@@ -105,3 +112,17 @@ docker run -d --name nclet \
     -v $(pwd)/data:/data \
     netcon-pms-nclet:dev
 ```
+
+After then, you need to create Worker resource to work with dummy scheduler.
+
+```
+kubectl apply -f - <<EOF
+apiVersion: netcon.janog.gr.jp/v1alpha1
+kind: Worker
+metadata:
+  namespace: netcon
+  name: worker001
+EOF
+```
+
+Now, you can deploy ContainerLab environment with this system. To try it, apply `./config/samples/netcon_v1alpha1_problemenvironment.yaml`.
