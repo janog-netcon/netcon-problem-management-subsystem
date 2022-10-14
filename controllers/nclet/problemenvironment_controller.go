@@ -160,7 +160,7 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 	log := log.FromContext(ctx)
 
 	// TODO(proelbtn): instantiate
-	status, err := r.driver.Check(ctx, r.Client, *problemEnvironment)
+	status, _, err := r.driver.Check(ctx, r.Client, *problemEnvironment)
 	if err != nil {
 		message := "failed to check ProblemEnvironment"
 		log.Error(err, message)
