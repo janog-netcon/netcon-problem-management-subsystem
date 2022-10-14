@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 
@@ -149,8 +150,11 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	for i := range labData.Containers {
 		containerDetail := &labData.Containers[i]
 
+		containerPrefix := fmt.Sprintf("clab-%s-", problemEnvironment.Name)
+		containerName := strings.ReplaceAll(containerDetail.Name, containerPrefix, "")
+
 		containerStatuses = append(containerStatuses, netconv1alpha1.ContainerStatus{
-			Name:                containerDetail.Name,
+			Name:                containerName,
 			Image:               containerDetail.Image,
 			ContainerID:         containerDetail.ContainerID,
 			Ready:               containerDetail.State == "running",
