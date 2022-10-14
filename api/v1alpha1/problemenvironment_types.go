@@ -46,7 +46,16 @@ type ConfigMapFileSource struct {
 
 // ProblemEnvironmentStatus defines the observed state of ProblemEnvironment
 type ProblemEnvironmentStatus struct {
+	Containers []ContainerStatus  `json:"containers,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+type ContainerStatus struct {
+	Name                string `json:"name"`
+	Image               string `json:"image"`
+	ContainerID         string `json:"containerID"`
+	Ready               bool   `json:"ready"`
+	ManagementIPAddress string `json:"managementIPAddress"`
 }
 
 //+kubebuilder:object:root=true
