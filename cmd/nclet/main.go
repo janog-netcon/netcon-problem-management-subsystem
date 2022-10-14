@@ -76,8 +76,8 @@ func main() {
 	}
 
 	driver := drivers.NewContainerLabProblemEnvironmentDriver()
-  
-  workerName, err := os.Hostname()
+
+	workerName, err := os.Hostname()
 	if err != nil {
 		setupLog.Error(err, "failed to get hostname")
 		os.Exit(1)
