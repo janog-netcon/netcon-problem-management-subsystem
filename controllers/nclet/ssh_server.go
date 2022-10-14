@@ -7,12 +7,16 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"net"
+	"io"
 	"os"
+	"os/exec"
 	"path"
 
+	"github.com/creack/pty"
+	"github.com/gliderlabs/ssh"
+
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh"
+	gossh "golang.org/x/crypto/ssh"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,11 +43,8 @@ func (r *SSHServer) fileExists(path string) bool {
 	return err == nil
 }
 
-func (r *SSHServer) ensureRSAHostKey(ctx context.Context) error {
-	log := log.FromContext(ctx)
-
+func (r *SSHServer) ensureRSAHostKey() error {
 	if r.fileExists(rsaHostKeyPath) {
-		log.V(1).Info("RSA host key already exists, skip to create RSA host key")
 		return nil
 	}
 
@@ -69,16 +70,16 @@ func (r *SSHServer) ensureRSAHostKey(ctx context.Context) error {
 
 }
 
-func (r *SSHServer) ensureHostKeys(ctx context.Context) error {
-	if err := r.ensureRSAHostKey(ctx); err != nil {
+func (r *SSHServer) ensureHostKeys() error {
+	if err := r.ensureRSAHostKey(); err != nil {
 		return fmt.Errorf("failed to ensure RSA host key: %w", err)
 	}
 
 	return nil
 }
 
-func (r *SSHServer) injectHostKeys(ctx context.Context, config *ssh.ServerConfig) error {
-	if err := r.ensureHostKeys(ctx); err != nil {
+func (r *SSHServer) injectHostKeys(server *ssh.Server) error {
+	if err := r.ensureHostKeys(); err != nil {
 		return fmt.Errorf("failed to ensure host keys: %w", err)
 	}
 
@@ -87,79 +88,60 @@ func (r *SSHServer) injectHostKeys(ctx context.Context, config *ssh.ServerConfig
 		return fmt.Errorf("failed to read RSA host key: %w", err)
 	}
 
-	rsaHostKey, err := ssh.ParsePrivateKey(rsaHostKeyData)
+	rsaHostKey, err := gossh.ParsePrivateKey(rsaHostKeyData)
 	if err != nil {
 		return fmt.Errorf("failed to parse RSA host key: %w", err)
 	}
 
-	config.AddHostKey(rsaHostKey)
+	server.AddHostKey(rsaHostKey)
 
 	return nil
 }
 
-func (r *SSHServer) bannerCallback(ctx context.Context, conn ssh.ConnMetadata) string {
-	return "network contest"
+func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) (bool, error) {
+	return true, nil
 }
 
-func (r *SSHServer) passwordCallback(ctx context.Context, conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
-	return nil, nil
-}
-
-func (r *SSHServer) handleChannel(ctx context.Context, newChannel ssh.NewChannel) {
-	if newChannel.ChannelType() != "session" {
-		newChannel.Reject(ssh.UnknownChannelType, "session channel is only accepted")
-		return
-	}
-
-	channel, reqs, err := newChannel.Accept()
+func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
+	cmd := exec.Command("access-helper", "-t", "/data/pro-001-a0e832/manifest.yml")
+	ptmx, err := pty.Start(cmd)
 	if err != nil {
 		return
 	}
-	go ssh.DiscardRequests(reqs)
 
-	// TODO: access to problem environment
-	channel.Close()
-}
+	go func() { _, _ = io.Copy(ptmx, s) }()
+	_, _ = io.Copy(s, ptmx)
 
-func (r *SSHServer) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel) {
-	for channel := range chans {
-		r.handleChannel(ctx, channel)
-	}
+	s.Close()
 }
 
 func (r *SSHServer) Start(ctx context.Context) error {
-	listener, err := net.Listen("tcp", "0.0.0.0:22222")
-	if err != nil {
+	log := log.FromContext(ctx)
+
+	server := &ssh.Server{
+		Addr: ":2222",
+		PasswordHandler: func(sctx ssh.Context, password string) bool {
+			ok, err := r.handlePasswordAuthentication(ctx, sctx, password)
+			if err != nil {
+				log.Error(err, "failed to handle password-based authentication")
+				return false
+			}
+			return ok
+		},
+		Handler: func(s ssh.Session) {
+			r.handle(ctx, s)
+		},
+	}
+
+	if err := r.injectHostKeys(server); err != nil {
 		return err
 	}
 
-	config := &ssh.ServerConfig{
-		BannerCallback: func(conn ssh.ConnMetadata) string {
-			return r.bannerCallback(ctx, conn)
-		},
-		PasswordCallback: func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
-			return r.passwordCallback(ctx, conn, password)
-		},
-	}
-
-	if err := r.injectHostKeys(ctx, config); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		return err
 	}
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			return err
-		}
-
-		_, chans, reqs, err := ssh.NewServerConn(conn, config)
-		if err != nil {
-			return err
-		}
-
-		go ssh.DiscardRequests(reqs)
-		go r.handleChannels(ctx, chans)
-	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
