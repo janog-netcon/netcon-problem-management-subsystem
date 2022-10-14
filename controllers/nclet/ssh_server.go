@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
@@ -23,6 +24,47 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
+
+type User struct {
+	ProblemEnvironmentName string
+	NodeName               string
+	Admin                  bool
+}
+
+// parseUser parses user name and return the information of connection
+//
+// valid formats are the following:
+// * Access with prompt
+//   - nc_{{ PROBLEM_ENVIRONMENT_NAME }}
+//   - ncadmin_{{ PROBLEM_ENVIRONMENT_NAME }}
+//
+// * Access without prompt
+//   - nc_{{ PROBLEM_ENVIRONMENT_NAME }}_{{ NODE_NAME }}
+//   - ncadmin_{{ PROBLEM_ENVIRONMENT_NAME }}_{{ NODE_NAME }}
+func parseUser(user string) (*User, error) {
+	parts := strings.Split(user, "_")
+
+	if !(len(parts) == 2 || len(parts) == 3) {
+		return nil, errors.New("invalid format")
+	}
+
+	if !(parts[0] == "nc" || parts[0] == "ncadmin") {
+		return nil, errors.New("invalid format")
+	}
+
+	problemEnvironmentName := parts[1]
+	nodeName := ""
+	if len(parts) == 3 {
+		nodeName = parts[2]
+	}
+	admin := parts[0] == "ncadmin"
+
+	return &User{
+		ProblemEnvironmentName: problemEnvironmentName,
+		NodeName:               nodeName,
+		Admin:                  admin,
+	}, nil
+}
 
 type SSHServer struct {
 	client.Client
@@ -99,15 +141,38 @@ func (r *SSHServer) injectHostKeys(server *ssh.Server) error {
 }
 
 func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) (bool, error) {
+	_, err := parseUser(sCtx.User())
+	if err != nil {
+		return false, nil
+	}
+
+	// TODO: implement password authentication
+
 	return true, nil
 }
 
 func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
-	cmd := exec.Command("access-helper", "-t", "/data/pro-001-a0e832/manifest.yml")
+	user, err := parseUser(s.User())
+	if err != nil {
+		return
+	}
+
+	topologyFilePath := path.Join("data", user.ProblemEnvironmentName, "manifest.yml")
+
+	var cmd *exec.Cmd
+
+	if user.NodeName != "" {
+		cmd = exec.Command("access-helper", "-t", topologyFilePath, user.NodeName)
+	} else {
+		cmd = exec.Command("access-helper", "-t", topologyFilePath)
+	}
+
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
 		return
 	}
+
+	// TODO: handle terminal resize
 
 	go func() { _, _ = io.Copy(ptmx, s) }()
 	_, _ = io.Copy(s, ptmx)
