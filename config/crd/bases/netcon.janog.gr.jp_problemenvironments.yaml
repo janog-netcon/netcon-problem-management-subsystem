@@ -24,6 +24,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: READY
       type: string
+    - jsonPath: .status.containers.summary
+      name: CONTAINERS
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -137,29 +140,34 @@ spec:
                   type: object
                 type: array
               containers:
-                items:
-                  properties:
-                    containerID:
-                      type: string
-                    image:
-                      type: string
-                    managementIPAddress:
-                      type: string
-                    name:
-                      type: string
-                    ready:
-                      type: boolean
-                  required:
-                  - containerID
-                  - image
-                  - managementIPAddress
-                  - name
-                  - ready
-                  type: object
-                type: array
-            required:
-            - conditions
-            - containers
+                properties:
+                  details:
+                    items:
+                      properties:
+                        containerID:
+                          type: string
+                        image:
+                          type: string
+                        managementIPAddress:
+                          type: string
+                        name:
+                          type: string
+                        ready:
+                          type: boolean
+                      required:
+                      - containerID
+                      - image
+                      - managementIPAddress
+                      - name
+                      - ready
+                      type: object
+                    type: array
+                  summary:
+                    type: string
+                required:
+                - details
+                - summary
+                type: object
             type: object
         type: object
     served: true

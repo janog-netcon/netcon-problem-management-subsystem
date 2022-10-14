@@ -123,7 +123,7 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
-) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerStatus, error) {
+) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus, error) {
 	log := log.FromContext(ctx)
 
 	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
@@ -146,14 +146,14 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 		return StatusUnknown, nil, fmt.Errorf("failed to inspect ContainerLab: %w", err)
 	}
 
-	containerStatuses := []netconv1alpha1.ContainerStatus{}
+	containerStatuses := []netconv1alpha1.ContainerDetailStatus{}
 	for i := range labData.Containers {
 		containerDetail := &labData.Containers[i]
 
 		containerPrefix := fmt.Sprintf("clab-%s-", problemEnvironment.Name)
 		containerName := strings.ReplaceAll(containerDetail.Name, containerPrefix, "")
 
-		containerStatuses = append(containerStatuses, netconv1alpha1.ContainerStatus{
+		containerStatuses = append(containerStatuses, netconv1alpha1.ContainerDetailStatus{
 			Name:                containerName,
 			Image:               containerDetail.Image,
 			ContainerID:         containerDetail.ContainerID,
