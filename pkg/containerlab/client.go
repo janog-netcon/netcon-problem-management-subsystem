@@ -3,11 +3,13 @@ package containerlab
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 )
@@ -48,6 +50,20 @@ func (c *ContainerLabClient) TopologyFilePath() string {
 
 func (c *ContainerLabClient) TopologyFileName() string {
 	return c.topologyFileName
+}
+
+func (c *ContainerLabClient) LoadTopologyFile() (*Config, error) {
+	topologyFileData, err := os.ReadFile(c.TopologyFilePath())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read topology file")
+	}
+
+	config := Config{}
+	if err := yaml.Unmarshal(topologyFileData, &config); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal topology file")
+	}
+
+	return &config, nil
 }
 
 func (c *ContainerLabClient) Deploy(ctx context.Context) error {
