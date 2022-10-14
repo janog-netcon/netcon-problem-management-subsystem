@@ -150,11 +150,11 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 		containerDetail := &labData.Containers[i]
 
 		containerStatuses = append(containerStatuses, ContainerStatus{
-			Name:              containerDetail.Name,
-			Image:             containerDetail.Image,
-			ContainerID:       containerDetail.ContainerID,
-			IsReady:           containerDetail.State == "running",
-			ManagementAddress: containerDetail.IPv4Address,
+			Name:                containerDetail.Name,
+			Image:               containerDetail.Image,
+			ContainerID:         containerDetail.ContainerID,
+			Ready:               containerDetail.State == "running",
+			ManagementIPAddress: containerDetail.IPv4Address,
 		})
 
 	}

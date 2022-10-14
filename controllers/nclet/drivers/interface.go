@@ -17,11 +17,11 @@ const (
 )
 
 type ContainerStatus struct {
-	Name              string
-	Image             string
-	ContainerID       string
-	IsReady           bool
-	ManagementAddress string
+	Name                string
+	Image               string
+	ContainerID         string
+	Ready               bool
+	ManagementIPAddress string
 }
 
 type ProblemEnvironmentDriver interface {
