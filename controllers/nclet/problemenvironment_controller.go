@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,7 +114,7 @@ func (r *ProblemEnvironmentReconciler) update(
 		log.Error(err, "failed to update")
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func (r *ProblemEnvironmentReconciler) updateStatus(
@@ -126,7 +127,7 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 		log.Error(err, "failed to update status")
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func (r *ProblemEnvironmentReconciler) cleanup(
@@ -160,7 +161,7 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 	log := log.FromContext(ctx)
 
 	// TODO(proelbtn): instantiate
-	status, _, err := r.driver.Check(ctx, r.Client, *problemEnvironment)
+	status, containerStatuses, err := r.driver.Check(ctx, r.Client, *problemEnvironment)
 	if err != nil {
 		message := "failed to check ProblemEnvironment"
 		log.Error(err, message)
@@ -177,6 +178,20 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 	log.V(1).Info("checked the status of ProblemEnvironment", "status", status)
 
 	switch status {
+	case drivers.StatusUp:
+		if !reflect.DeepEqual(containerStatuses, problemEnvironment.Status.Containers) {
+			log.V(1).Info("updating container statuses",
+				"oldContainerStatuses", problemEnvironment.Status.Containers,
+				"containerStatuses", containerStatuses,
+			)
+			problemEnvironment.Status.Containers = containerStatuses
+			return r.updateStatus(ctx, problemEnvironment, ctrl.Result{
+				// RequeueAfter: 1 * time.Second,
+			})
+		}
+		return ctrl.Result{
+			// RequeueAfter: 3 * time.Second,
+		}, nil
 	case drivers.StatusDown:
 		if err := r.driver.Deploy(ctx, r.Client, *problemEnvironment); err != nil {
 			message := "failed to deploy ProblemEnvironment"

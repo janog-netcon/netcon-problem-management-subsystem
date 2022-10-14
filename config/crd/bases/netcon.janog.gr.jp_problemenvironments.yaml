@@ -157,6 +157,9 @@ spec:
                   - ready
                   type: object
                 type: array
+            required:
+            - conditions
+            - containers
             type: object
         type: object
     served: true

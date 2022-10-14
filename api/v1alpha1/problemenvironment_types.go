@@ -46,8 +46,8 @@ type ConfigMapFileSource struct {
 
 // ProblemEnvironmentStatus defines the observed state of ProblemEnvironment
 type ProblemEnvironmentStatus struct {
-	Containers []ContainerStatus  `json:"containers,omitempty"`
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Containers []ContainerStatus  `json:"containers"`
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 type ContainerStatus struct {

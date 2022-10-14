@@ -16,16 +16,8 @@ const (
 	StatusDown    ProblemEnvironmentStatus = "Down"
 )
 
-type ContainerStatus struct {
-	Name                string
-	Image               string
-	ContainerID         string
-	Ready               bool
-	ManagementIPAddress string
-}
-
 type ProblemEnvironmentDriver interface {
-	Check(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) (ProblemEnvironmentStatus, []ContainerStatus, error)
+	Check(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerStatus, error)
 	Deploy(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) error
 	Destroy(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) error
 }
