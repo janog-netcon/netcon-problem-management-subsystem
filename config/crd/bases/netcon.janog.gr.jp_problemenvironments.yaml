@@ -24,6 +24,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: READY
       type: string
+    - jsonPath: .status.conditions[?(@.type=="Assigned")].status
+      name: ASSIGNED
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
