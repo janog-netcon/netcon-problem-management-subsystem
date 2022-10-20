@@ -94,6 +94,7 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 		log.Info("created ProblemEnvironment")
 	} else if problem.Spec.Replicas < len(problemEnvironments.Items) {
+		// TODO: Need to check if the probenv is in-use or not
 		extraProblemEnv := len(problemEnvironments.Items) - problem.Spec.Replicas
 		for i := 0; i < extraProblemEnv; i++ {
 			if err := r.Delete(ctx, &problemEnvironments.Items[i]); err != nil {
