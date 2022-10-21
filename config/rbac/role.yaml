@@ -11,6 +11,7 @@ rules:
   - problemenvironments
   verbs:
   - create
+  - delete
   - get
   - list
   - patch

@@ -23,9 +23,18 @@ import (
 type ProblemEnvironmentConditionType string
 
 const (
+	// Scheduled will be True when:
+	// * ProblemEnvironment is scheduled
+	// * Worker where ProblemEnvironment is scheduled exists
 	ProblemEnvironmentConditionScheduled ProblemEnvironmentConditionType = "Scheduled"
 
+	// Ready will be True when:
+	// * ProblemEnvironment is instantiated on Worker
 	ProblemEnvironmentConditionReady ProblemEnvironmentConditionType = "Ready"
+
+	// Assigned will be True when:
+	// * ProblemEnvironment is assigned to some users
+	ProblemEnvironmentConditionAssigned ProblemEnvironmentConditionType = "Assigned"
 )
 
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
@@ -54,6 +63,7 @@ type ProblemEnvironmentStatus struct {
 //+kubebuilder:resource:shortName=probenv
 //+kubebuilder:printcolumn:name=SCHEDULED,type=string,JSONPath=.status.conditions[?(@.type=="Scheduled")].status
 //+kubebuilder:printcolumn:name=READY,type=string,JSONPath=.status.conditions[?(@.type=="Ready")].status
+//+kubebuilder:printcolumn:name=ASSIGNED,type=string,JSONPath=.status.conditions[?(@.type=="Assigned")].status
 
 // ProblemEnvironment is the Schema for the problemenvironments API
 type ProblemEnvironment struct {
