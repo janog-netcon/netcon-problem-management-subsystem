@@ -46,6 +46,7 @@ func (r *ProblemEnvironment) Default() {
 	problemenvironmentlog.Info("default", "name", r.Name)
 
 	// TODO(user): fill in your defaulting logic.
+	// TODO(motacapla): Impl defaulting for conditions such as READY, SCHEDULED, ASSIGNED
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.

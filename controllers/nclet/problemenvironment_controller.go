@@ -192,13 +192,21 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 		}
 	}
 
+	reason := "Instantiated"
 	message := "ProblemEnvironment is instantiated"
 	log.Info(message)
 	util.SetProblemEnvironmentCondition(
 		problemEnvironment,
 		netconv1alpha1.ProblemEnvironmentConditionReady,
 		metav1.ConditionTrue,
-		"Instantiated",
+		reason,
+		message,
+	)
+	util.SetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionAssigned,
+		metav1.ConditionFalse,
+		reason,
 		message,
 	)
 
