@@ -21,8 +21,8 @@ func (*NoopProblemEnvironmentDriver) Check(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
-) (ProblemEnvironmentStatus, error) {
-	return StatusUp, nil
+) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus, error) {
+	return StatusUp, nil, nil
 }
 
 // Deploy implements ProblemEnvironmentDriver

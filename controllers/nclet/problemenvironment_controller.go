@@ -18,6 +18,9 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,6 +39,7 @@ import (
 const WorkerName string = "worker001"
 
 const ProblemEnvironmentFinalizer string = "problemenvironment.netcon.janog.gr.jp"
+const StatusRefreshInterval = 5 * time.Second
 
 // ProblemEnvironmentReconciler reconciles a ProblemEnvironment object
 type ProblemEnvironmentReconciler struct {
@@ -113,7 +117,7 @@ func (r *ProblemEnvironmentReconciler) update(
 		log.Error(err, "failed to update")
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func (r *ProblemEnvironmentReconciler) updateStatus(
@@ -126,7 +130,26 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 		log.Error(err, "failed to update status")
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return res, nil
+}
+
+func (r *ProblemEnvironmentReconciler) generateContainersStatusSummary(
+	containerDetailStatuses []netconv1alpha1.ContainerDetailStatus,
+) string {
+	if len(containerDetailStatuses) == 0 {
+		return "None"
+	}
+
+	parts := []string{}
+	for i := range containerDetailStatuses {
+		containerDetailStatus := &containerDetailStatuses[i]
+		parts = append(parts, fmt.Sprintf("%s:%s",
+			containerDetailStatus.Name,
+			containerDetailStatus.ManagementIPAddress,
+		))
+	}
+
+	return strings.Join(parts, ", ")
 }
 
 func (r *ProblemEnvironmentReconciler) cleanup(
@@ -160,7 +183,7 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 	log := log.FromContext(ctx)
 
 	// TODO(proelbtn): instantiate
-	status, err := r.driver.Check(ctx, r.Client, *problemEnvironment)
+	status, containerDetailStatuses, err := r.driver.Check(ctx, r.Client, *problemEnvironment)
 	if err != nil {
 		message := "failed to check ProblemEnvironment"
 		log.Error(err, message)
@@ -177,6 +200,29 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 	log.V(1).Info("checked the status of ProblemEnvironment", "status", status)
 
 	switch status {
+	case drivers.StatusUp:
+		needToUpdateStatus := false
+		if problemEnvironment.Status.Containers == nil {
+			needToUpdateStatus = true
+		} else if !reflect.DeepEqual(containerDetailStatuses, problemEnvironment.Status.Containers.Details) {
+			needToUpdateStatus = true
+		}
+
+		if needToUpdateStatus {
+			log.V(1).Info("updating container statuses",
+				"oldContainerStatuses", problemEnvironment.Status.Containers,
+				"containerStatuses", containerDetailStatuses,
+			)
+
+			problemEnvironment.Status.Containers = &netconv1alpha1.ContainersStatus{
+				Summary: r.generateContainersStatusSummary(containerDetailStatuses),
+				Details: containerDetailStatuses,
+			}
+
+			return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: StatusRefreshInterval})
+		}
+
+		return ctrl.Result{RequeueAfter: StatusRefreshInterval}, nil
 	case drivers.StatusDown:
 		if err := r.driver.Deploy(ctx, r.Client, *problemEnvironment); err != nil {
 			message := "failed to deploy ProblemEnvironment"
@@ -210,7 +256,7 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 		message,
 	)
 
-	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
+	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: StatusRefreshInterval})
 }
 
 // SetupWithManager sets up the controller with the Manager.

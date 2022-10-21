@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 
@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
 )
 
 type ContainerLabProblemEnvironmentDriver struct{}
@@ -50,6 +51,13 @@ func (d *ContainerLabProblemEnvironmentDriver) delete(path string) (bool, error)
 		return false, nil
 	}
 	return true, os.RemoveAll(path)
+}
+
+func (d *ContainerLabProblemEnvironmentDriver) getContainerLabClientFor(
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) *containerlab.ContainerLabClient {
+	manifestPath := path.Join("data", problemEnvironment.Name, "manifest.yml")
+	return containerlab.NewContainerLabClient(manifestPath)
 }
 
 func (d *ContainerLabProblemEnvironmentDriver) getDirectoryPathFor(
@@ -100,7 +108,7 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 		return nil, err
 	}
 
-	topologyConfig := Config{}
+	topologyConfig := containerlab.Config{}
 	if err := yaml.Unmarshal([]byte(topology), &topologyConfig); err != nil {
 		return nil, err
 	}
@@ -115,13 +123,46 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
-) (ProblemEnvironmentStatus, error) {
-	directoryPath := d.getDirectoryPathFor(&problemEnvironment)
+) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus, error) {
+	log := log.FromContext(ctx)
+
+	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
+
+	directoryPath := client.WorkingDirectoryPath()
 	if !d.fileExists(directoryPath) {
-		return StatusDown, nil
+		// directory not found, ProblemEnvironment haven't been created
+		log.V(1).Info("working directory not found, skip to inspect")
+		return StatusDown, nil, nil
 	}
 
-	return StatusUp, nil
+	topologyFilePath := client.TopologyFilePath()
+	if !d.fileExists(topologyFilePath) {
+		log.V(1).Info("topology file not found, skip to inspect")
+		return StatusDown, nil, nil
+	}
+
+	labData, err := client.Inspect(ctx)
+	if err != nil {
+		return StatusUnknown, nil, fmt.Errorf("failed to inspect ContainerLab: %w", err)
+	}
+
+	containerStatuses := []netconv1alpha1.ContainerDetailStatus{}
+	for i := range labData.Containers {
+		containerDetail := &labData.Containers[i]
+
+		containerPrefix := fmt.Sprintf("clab-%s-", problemEnvironment.Name)
+		containerName := strings.ReplaceAll(containerDetail.Name, containerPrefix, "")
+
+		containerStatuses = append(containerStatuses, netconv1alpha1.ContainerDetailStatus{
+			Name:                containerName,
+			Image:               containerDetail.Image,
+			ContainerID:         containerDetail.ContainerID,
+			Ready:               containerDetail.State == "running",
+			ManagementIPAddress: containerDetail.IPv4Address,
+		})
+	}
+
+	return StatusUp, containerStatuses, nil
 }
 
 // Deploy implements ProblemEnvironmentDriver
@@ -132,29 +173,30 @@ func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 ) error {
 	log := log.FromContext(ctx)
 
+	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
+
 	topologyFile, err := d.getTopologyFileFor(ctx, reader, &problemEnvironment)
 	if err != nil {
 		return err
 	}
 
-	directoryPath := d.getDirectoryPathFor(&problemEnvironment)
+	directoryPath := client.WorkingDirectoryPath()
 	log.V(1).Info("ensuring directory for ProblemEnvironment", "path", directoryPath)
 	if err := d.ensureDirectory(directoryPath); err != nil {
-		log.Error(err, "failed to create directory")
-		return err
+		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	topologyFilePath := path.Join(directoryPath, "manifest.yml")
+	topologyFilePath := client.TopologyFilePath()
 	log.V(1).Info("creating topology file", "path", topologyFilePath)
 	if _, err := d.createOrUpdateFile(topologyFilePath, []byte(topologyFile)); err != nil {
-		log.Error(err, "failed to create topology file")
-		return err
+		return fmt.Errorf("failed to create or update topology file: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, "/usr/bin/clab", "-t", "manifest.yml", "deploy")
-	cmd.Dir = directoryPath
+	if err := client.Deploy(ctx); err != nil {
+		return fmt.Errorf("failed to deploy ContainerLab: %w", err)
+	}
 
-	return cmd.Run()
+	return nil
 }
 
 // Destroy implements ProblemEnvironmentDriver
@@ -163,22 +205,24 @@ func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
-	directoryPath := d.getDirectoryPathFor(&problemEnvironment)
-	if err := d.ensureDirectory(directoryPath); err != nil {
-		return err
+	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
+
+	status, _, err := d.Check(ctx, reader, problemEnvironment)
+	if err != nil {
+		return fmt.Errorf("failed to destroy ContainerLab: %w", err)
 	}
 
-	topologyFilePath := path.Join(directoryPath, "manifest.yml")
-
-	if d.fileExists(topologyFilePath) {
-		cmd := exec.CommandContext(ctx, "/usr/bin/clab", "-t", "manifest.yml", "destroy")
-		cmd.Dir = directoryPath
-
-		if err := cmd.Run(); err != nil {
-			return err
+	if status != StatusDown {
+		// Destroy may be failed when status is StatusUnknown
+		if err := client.Destroy(ctx); err != nil {
+			return fmt.Errorf("failed to destroy ContainerLab: %w", err)
 		}
 	}
 
-	_, err := d.delete(directoryPath)
-	return err
+	directoryPath := client.WorkingDirectoryPath()
+	if _, err := d.delete(directoryPath); err != nil {
+		return fmt.Errorf("failed to delete directory for ProblemEnvironment: %w", err)
+	}
+
+	return nil
 }

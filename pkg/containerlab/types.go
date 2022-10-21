@@ -1,4 +1,4 @@
-package drivers
+package containerlab
 
 type Config struct {
 	Name     string   `yaml:"name"`
@@ -104,4 +104,28 @@ type Extras struct {
 	// Proxy address that mysocketctl will use
 	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
 	// paths to files which are to be copied to ceos flash dir
+}
+
+// ref: https://github.com/srl-labs/containerlab/blob/v0.32.1/types/types.go#L359-L362
+type LabData struct {
+	Containers []ContainerDetails `json:"containers"`
+
+	// In this definition, MySocketIo is missing because it isn't needed for us
+}
+
+// ref: https://github.com/srl-labs/containerlab/blob/v0.32.1/types/types.go#L318-L329
+type ContainerDetails struct {
+	LabName     string `json:"lab_name,omitempty"`
+	LabPath     string `json:"labPath,omitempty"`
+	Name        string `json:"name,omitempty"`
+	ContainerID string `json:"container_id,omitempty"`
+	Image       string `json:"image,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+
+	State       string `json:"state,omitempty"`
+	IPv4Address string `json:"ipv4_address,omitempty"`
+	IPv6Address string `json:"ipv6_address,omitempty"`
+
+	// In this definition, Group is missing because it doesn't seem to be used in `clab inspect`.
+	// ref: https://github.com/srl-labs/containerlab/blob/v0.32.1/cmd/inspect.go#L137-L277
 }
