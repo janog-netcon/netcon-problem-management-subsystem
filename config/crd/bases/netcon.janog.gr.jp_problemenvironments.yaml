@@ -26,6 +26,7 @@ spec:
       type: string
     - jsonPath: .status.conditions[?(@.type=="Assigned")].status
       name: ASSIGNED
+      type: string
     - jsonPath: .status.containers.summary
       name: CONTAINERS
       type: string
