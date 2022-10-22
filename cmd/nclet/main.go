@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -84,7 +85,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(&controllers.HeartbeatAgent{}); err != nil {
+	workerName, err := os.Hostname()
+	if err != nil {
+		setupLog.Error(err, "failed to get hostname")
+		os.Exit(1)
+	}
+
+	heartbeatInterval := 3 * time.Second
+	statusUpdateInterval := 10 * time.Second
+
+	if err = mgr.Add(controllers.NewHeartbeatAgent(
+		workerName,
+		heartbeatInterval,
+		statusUpdateInterval,
+	)); err != nil {
 		setupLog.Error(err, "unable to add heartbeat agent")
 	}
 
