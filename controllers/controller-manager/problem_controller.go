@@ -77,7 +77,6 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			assignableProblemEnvironments = assignableProblemEnvironments + 1
 		}
 	}
-	log.Info("assignableProblemEnvironments: " + strconv.Itoa(assignableProblemEnvironments))
 
 	if problem.Spec.AssignableReplicas > assignableProblemEnvironments {
 		newProbEnv := netconv1alpha1.ProblemEnvironment{}
@@ -106,12 +105,18 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 		log.Info("created ProblemEnvironment")
 	} else if problem.Spec.AssignableReplicas < assignableProblemEnvironments {
+		diff := assignableProblemEnvironments - problem.Spec.AssignableReplicas
+		delete_count := 0
 		for _, pe := range problemEnvironments.Items {
+			if delete_count >= diff {
+				break
+			}
 			condition := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionAssigned)
 			if condition != metav1.ConditionTrue {
 				if err := r.Delete(ctx, &pe); err != nil {
 					return ctrl.Result{}, err
 				}
+				delete_count += 1
 				log.Info("deleted ProblemEnvironment")
 			}
 		}
