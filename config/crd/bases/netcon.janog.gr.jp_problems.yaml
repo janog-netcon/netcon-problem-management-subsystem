@@ -47,16 +47,13 @@ spec:
                     description: ProblemEnvironmentSpec defines the desired state
                       of ProblemEnvironment
                     properties:
-                      topologyFile:
+                      files:
                         properties:
                           configMapRef:
                             properties:
-                              key:
-                                type: string
                               name:
                                 type: string
                             required:
-                            - key
                             - name
                             type: object
                         required:
@@ -65,7 +62,7 @@ spec:
                       workerName:
                         type: string
                     required:
-                    - topologyFile
+                    - files
                     type: object
                 type: object
             required:

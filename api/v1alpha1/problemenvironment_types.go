@@ -39,7 +39,7 @@ const (
 
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
 type ProblemEnvironmentSpec struct {
-	TopologyFile FileSource `json:"topologyFile"`
+	Files FileSource `json:"files"`
 
 	WorkerName string `json:"workerName,omitempty"`
 }
@@ -49,7 +49,6 @@ type FileSource struct {
 }
 
 type ConfigMapFileSource struct {
-	Key  string `json:"key"`
 	Name string `json:"name"`
 }
 

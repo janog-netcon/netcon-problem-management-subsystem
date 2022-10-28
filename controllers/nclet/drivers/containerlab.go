@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -17,7 +18,10 @@ import (
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
+	"github.com/pkg/errors"
 )
+
+const TopologyFileKey = "manifest.yml"
 
 type ContainerLabProblemEnvironmentDriver struct{}
 
@@ -53,6 +57,57 @@ func (d *ContainerLabProblemEnvironmentDriver) delete(path string) (bool, error)
 	return true, os.RemoveAll(path)
 }
 
+func (d *ContainerLabProblemEnvironmentDriver) ensureFilesFor(
+	ctx context.Context,
+	reader client.Reader,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	client *containerlab.ContainerLabClient,
+) error {
+	configMap := corev1.ConfigMap{}
+	if err := reader.Get(ctx, types.NamespacedName{
+		Namespace: problemEnvironment.Namespace,
+		Name:      problemEnvironment.Spec.Files.ConfigMapRef.Name,
+	}, &configMap); err != nil {
+		return errors.Wrap(err, "failed to load configMap")
+	}
+
+	workingDirectory := client.WorkingDirectoryPath()
+	if err := d.ensureDirectory(workingDirectory); err != nil {
+		return errors.Wrap(err, "failed to create working directory")
+	}
+
+	for key, content := range configMap.Data {
+		path := path.Join(workingDirectory, key)
+		if _, err := d.createOrUpdateFile(path, []byte(content)); err != nil {
+			return errors.Wrap(err, "failed to create or update file")
+		}
+	}
+
+	topologyFilePath := client.TopologyFilePath()
+	topology, err := ioutil.ReadFile(topologyFilePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to load topology file")
+	}
+
+	topologyConfig := containerlab.Config{}
+	if err := yaml.UnmarshalStrict(topology, &topologyConfig); err != nil {
+		return errors.Wrap(err, "failed to unmarshal topology file")
+	}
+
+	topologyConfig.Name = problemEnvironment.Name
+
+	topology, err = yaml.Marshal(topologyConfig)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal topology file")
+	}
+
+	if _, err := d.createOrUpdateFile(topologyFilePath, topology); err != nil {
+		return errors.Wrap(err, "failed to create or update topology file")
+	}
+
+	return nil
+}
+
 func (d *ContainerLabProblemEnvironmentDriver) getContainerLabClientFor(
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) *containerlab.ContainerLabClient {
@@ -64,58 +119,6 @@ func (d *ContainerLabProblemEnvironmentDriver) getDirectoryPathFor(
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) string {
 	return path.Join("data", problemEnvironment.Name)
-}
-
-func (d *ContainerLabProblemEnvironmentDriver) loadTopologyFile(
-	ctx context.Context,
-	reader client.Reader,
-	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-) ([]byte, error) {
-	log := log.FromContext(ctx)
-
-	configMap := corev1.ConfigMap{}
-	if err := reader.Get(ctx, types.NamespacedName{
-		Namespace: problemEnvironment.Namespace,
-		Name:      problemEnvironment.Spec.TopologyFile.ConfigMapRef.Name,
-	}, &configMap); err != nil {
-		log.Error(err, "failed to load topology file")
-		return nil, err
-	}
-
-	topology, ok := configMap.Data[problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key]
-	if !ok {
-		err := fmt.Errorf(
-			"ConfigMap found, but key `%s` missing",
-			problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key,
-		)
-		log.Error(err, "failed to load topology file")
-		return nil, err
-	}
-
-	return []byte(topology), nil
-}
-
-func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
-	ctx context.Context,
-	reader client.Reader,
-	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-) ([]byte, error) {
-	log := log.FromContext(ctx)
-
-	topology, err := d.loadTopologyFile(ctx, reader, problemEnvironment)
-	if err != nil {
-		log.Error(err, "failed to load topology file")
-		return nil, err
-	}
-
-	topologyConfig := containerlab.Config{}
-	if err := yaml.Unmarshal([]byte(topology), &topologyConfig); err != nil {
-		return nil, err
-	}
-
-	topologyConfig.Name = problemEnvironment.Name
-
-	return yaml.Marshal(topologyConfig)
 }
 
 // Check implements ProblemEnvironmentDriver
@@ -171,25 +174,10 @@ func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
-	log := log.FromContext(ctx)
-
 	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
 
-	topologyFile, err := d.getTopologyFileFor(ctx, reader, &problemEnvironment)
-	if err != nil {
+	if err := d.ensureFilesFor(ctx, reader, &problemEnvironment, client); err != nil {
 		return err
-	}
-
-	directoryPath := client.WorkingDirectoryPath()
-	log.V(1).Info("ensuring directory for ProblemEnvironment", "path", directoryPath)
-	if err := d.ensureDirectory(directoryPath); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	topologyFilePath := client.TopologyFilePath()
-	log.V(1).Info("creating topology file", "path", topologyFilePath)
-	if _, err := d.createOrUpdateFile(topologyFilePath, []byte(topologyFile)); err != nil {
-		return fmt.Errorf("failed to create or update topology file: %w", err)
 	}
 
 	if err := client.Deploy(ctx); err != nil {

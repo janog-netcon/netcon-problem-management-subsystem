@@ -23,10 +23,9 @@ metadata:
   namespace: netcon
   name: pro-001
 spec:
-  assignableReplicas: 3
+  assignableReplicas: 48
   template:
     spec:
-      topologyFile:
+      files:
         configMapRef:
           name: pro-001
-          key: manifest.yml
