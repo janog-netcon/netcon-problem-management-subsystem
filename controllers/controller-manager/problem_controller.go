@@ -18,7 +18,9 @@ package controllers
 
 import (
 	"context"
+	"strconv"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	util "github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
 
 const (
@@ -67,7 +70,15 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if problem.Spec.Replicas > len(problemEnvironments.Items) {
+	assignableProblemEnvironments := 0
+	for _, pe := range problemEnvironments.Items {
+		condition := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionAssigned)
+		if condition != metav1.ConditionTrue {
+			assignableProblemEnvironments = assignableProblemEnvironments + 1
+		}
+	}
+
+	if problem.Spec.AssignableReplicas > assignableProblemEnvironments {
 		newProbEnv := netconv1alpha1.ProblemEnvironment{}
 
 		template := *problem.Spec.Template.DeepCopy()
@@ -93,12 +104,20 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 
 		log.Info("created ProblemEnvironment")
-	} else if problem.Spec.Replicas < len(problemEnvironments.Items) {
-		// TODO: Need to check if the probenv is in-use or not
-		extraProblemEnv := len(problemEnvironments.Items) - problem.Spec.Replicas
-		for i := 0; i < extraProblemEnv; i++ {
-			if err := r.Delete(ctx, &problemEnvironments.Items[i]); err != nil {
-				return ctrl.Result{}, err
+	} else if problem.Spec.AssignableReplicas < assignableProblemEnvironments {
+		diff := assignableProblemEnvironments - problem.Spec.AssignableReplicas
+		delete_count := 0
+		for _, pe := range problemEnvironments.Items {
+			if delete_count >= diff {
+				break
+			}
+			condition := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionAssigned)
+			if condition != metav1.ConditionTrue {
+				if err := r.Delete(ctx, &pe); err != nil {
+					return ctrl.Result{}, err
+				}
+				delete_count += 1
+				log.Info("deleted ProblemEnvironment")
 			}
 		}
 	}

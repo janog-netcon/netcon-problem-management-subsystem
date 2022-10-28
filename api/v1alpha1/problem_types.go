@@ -24,7 +24,7 @@ import (
 type ProblemSpec struct {
 	Template *ProblemEnvironmentTemplate `json:"template"`
 
-	Replicas int `json:"replicas"`
+	AssignableReplicas int `json:"assignableReplicas"`
 }
 
 type ProblemEnvironmentTemplate struct {
