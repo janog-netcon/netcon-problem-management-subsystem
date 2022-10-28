@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -34,9 +35,6 @@ import (
 	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet/drivers"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
-
-// TODO: fetch Worker name dynamically
-const WorkerName string = "worker001"
 
 const ProblemEnvironmentFinalizer string = "problemenvironment.netcon.janog.gr.jp"
 const StatusRefreshInterval = 5 * time.Second
@@ -261,7 +259,12 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProblemEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager, driver drivers.ProblemEnvironmentDriver) error {
-	r.name = WorkerName
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	r.name = hostname
 	r.driver = driver
 
 	return ctrl.NewControllerManagedBy(mgr).
