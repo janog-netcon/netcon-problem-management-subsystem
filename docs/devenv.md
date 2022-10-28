@@ -103,13 +103,13 @@ After deploying controller-manager successfully, you can install nclet with thes
 
 ```bash
 kind get kubeconfig > kubeconfig
-mkdir ./data && chmod 0777 ./data
+sudo mkdir /data && chmod 0777 /data
 docker run -d --name nclet \
     --privileged --net=host --ipc=host \
     -e KUBECONFIG=/etc/kubernetes/kubeconfig \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v $(pwd)/kubeconfig:/etc/kubernetes/kubeconfig \
-    -v $(pwd)/data:/data \
+    -v /data:/data \
     netcon-pms-nclet:dev
 ```
 

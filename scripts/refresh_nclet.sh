@@ -7,5 +7,5 @@ docker run -d --name nclet \
     -e KUBECONFIG=/etc/kubernetes/kubeconfig \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v $(pwd)/kubeconfig:/etc/kubernetes/kubeconfig \
-    -v $(pwd)/data:/data \
+    -v /data:/data \
     netcon-pms-nclet:dev
