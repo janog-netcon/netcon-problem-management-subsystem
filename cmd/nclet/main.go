@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -75,6 +76,12 @@ func main() {
 	}
 
 	driver := drivers.NewContainerLabProblemEnvironmentDriver()
+  
+  workerName, err := os.Hostname()
+	if err != nil {
+		setupLog.Error(err, "failed to get hostname")
+		os.Exit(1)
+	}
 
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client: mgr.GetClient(),
@@ -87,6 +94,17 @@ func main() {
 	if err = mgr.Add(&controllers.SSHServer{}); err != nil {
 		setupLog.Error(err, "unable to create ssh server")
 		os.Exit(1)
+	}
+
+	heartbeatInterval := 3 * time.Second
+	statusUpdateInterval := 10 * time.Second
+
+	if err = mgr.Add(controllers.NewHeartbeatAgent(
+		workerName,
+		heartbeatInterval,
+		statusUpdateInterval,
+	)); err != nil {
+		setupLog.Error(err, "unable to add heartbeat agent")
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

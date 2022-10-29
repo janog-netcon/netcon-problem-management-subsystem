@@ -37,6 +37,8 @@ spec:
           spec:
             description: ProblemSpec defines the desired state of Problem
             properties:
+              assignableReplicas:
+                type: integer
               template:
                 properties:
                   metadata:
@@ -67,6 +69,7 @@ spec:
                     type: object
                 type: object
             required:
+            - assignableReplicas
             - template
             type: object
         type: object

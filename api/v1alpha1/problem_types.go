@@ -23,6 +23,8 @@ import (
 // ProblemSpec defines the desired state of Problem
 type ProblemSpec struct {
 	Template *ProblemEnvironmentTemplate `json:"template"`
+
+	AssignableReplicas int `json:"assignableReplicas"`
 }
 
 type ProblemEnvironmentTemplate struct {
