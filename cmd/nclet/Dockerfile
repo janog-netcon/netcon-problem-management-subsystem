@@ -20,6 +20,21 @@ COPY pkg/ pkg/
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o nclet ./cmd/nclet
 
+# Build the manager binary
+FROM golang:1.19 as access-helper_builder
+
+WORKDIR /workspace
+COPY go.mod go.mod
+COPY go.sum go.sum
+RUN go mod download
+
+COPY api/ api/
+COPY cmd/access-helper cmd/access-helper
+COPY pkg/ pkg/
+
+# Build
+RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o access-helper ./cmd/access-helper
+
 FROM nicolaka/netshoot:v0.7
 WORKDIR /
 
@@ -30,5 +45,6 @@ RUN wget https://github.com/srl-labs/containerlab/releases/download/v0.32.0/cont
     rm -rf /tmp/containerlab.apk
 
 COPY --from=builder /workspace/nclet .
+COPY --from=access-helper_builder /workspace/access-helper /bin
 
 ENTRYPOINT ["/nclet"]

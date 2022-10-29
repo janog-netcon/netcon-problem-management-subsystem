@@ -76,6 +76,12 @@ func main() {
 	}
 
 	driver := drivers.NewContainerLabProblemEnvironmentDriver()
+  
+  workerName, err := os.Hostname()
+	if err != nil {
+		setupLog.Error(err, "failed to get hostname")
+		os.Exit(1)
+	}
 
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client: mgr.GetClient(),
@@ -85,9 +91,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	workerName, err := os.Hostname()
-	if err != nil {
-		setupLog.Error(err, "failed to get hostname")
+	if err = mgr.Add(&controllers.SSHServer{}); err != nil {
+		setupLog.Error(err, "unable to create ssh server")
 		os.Exit(1)
 	}
 
