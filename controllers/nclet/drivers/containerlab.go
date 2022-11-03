@@ -123,7 +123,7 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
-) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus, error) {
+) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus) {
 	log := log.FromContext(ctx)
 
 	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
@@ -132,18 +132,19 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	if !d.fileExists(directoryPath) {
 		// directory not found, ProblemEnvironment haven't been created
 		log.V(1).Info("working directory not found, skip to inspect")
-		return StatusDown, nil, nil
+		return StatusNotReady, nil
 	}
 
 	topologyFilePath := client.TopologyFilePath()
 	if !d.fileExists(topologyFilePath) {
 		log.V(1).Info("topology file not found, skip to inspect")
-		return StatusDown, nil, nil
+		return StatusNotReady, nil
 	}
 
 	labData, err := client.Inspect(ctx)
 	if err != nil {
-		return StatusUnknown, nil, fmt.Errorf("failed to inspect ContainerLab: %w", err)
+		log.Error(err, "failed to inspect ContainerLab")
+		return StatusNotReady, nil
 	}
 
 	containerStatuses := []netconv1alpha1.ContainerDetailStatus{}
@@ -162,7 +163,7 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 		})
 	}
 
-	return StatusUp, containerStatuses, nil
+	return StatusReady, containerStatuses
 }
 
 // Deploy implements ProblemEnvironmentDriver
@@ -207,13 +208,9 @@ func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 ) error {
 	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
 
-	status, _, err := d.Check(ctx, reader, problemEnvironment)
-	if err != nil {
-		return fmt.Errorf("failed to destroy ContainerLab: %w", err)
-	}
+	status, _ := d.Check(ctx, reader, problemEnvironment)
 
-	if status != StatusDown {
-		// Destroy may be failed when status is StatusUnknown
+	if status == StatusReady {
 		if err := client.Destroy(ctx); err != nil {
 			return fmt.Errorf("failed to destroy ContainerLab: %w", err)
 		}

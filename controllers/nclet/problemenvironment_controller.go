@@ -183,24 +183,12 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 	log := log.FromContext(ctx)
 
 	// TODO(proelbtn): instantiate
-	status, containerDetailStatuses, err := r.driver.Check(ctx, r.Client, *problemEnvironment)
-	if err != nil {
-		message := "failed to check ProblemEnvironment"
-		log.Error(err, message)
-		util.SetProblemEnvironmentCondition(
-			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionReady,
-			metav1.ConditionFalse,
-			"CheckFailed",
-			message,
-		)
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
-	}
+	status, containerDetailStatuses := r.driver.Check(ctx, r.Client, *problemEnvironment)
 
 	log.V(1).Info("checked the status of ProblemEnvironment", "status", status)
 
 	switch status {
-	case drivers.StatusUp:
+	case drivers.StatusReady:
 		needToUpdateStatus := false
 		if problemEnvironment.Status.Containers == nil {
 			needToUpdateStatus = true
@@ -223,7 +211,7 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 		}
 
 		return ctrl.Result{RequeueAfter: StatusRefreshInterval}, nil
-	case drivers.StatusDown:
+	case drivers.StatusNotReady:
 		if err := r.driver.Deploy(ctx, r.Client, *problemEnvironment); err != nil {
 			message := "failed to deploy ProblemEnvironment"
 			log.Error(err, message)
