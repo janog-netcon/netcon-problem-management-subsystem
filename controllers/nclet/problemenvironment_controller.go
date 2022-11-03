@@ -176,6 +176,37 @@ func (r *ProblemEnvironmentReconciler) cleanup(
 	return r.update(ctx, problemEnvironment, ctrl.Result{})
 }
 
+func (r *ProblemEnvironmentReconciler) updateContainerStatus(
+	ctx context.Context,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	containerDetailStatuses []netconv1alpha1.ContainerDetailStatus,
+) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
+	needToUpdateStatus := false
+	if problemEnvironment.Status.Containers == nil {
+		needToUpdateStatus = true
+	} else if !reflect.DeepEqual(containerDetailStatuses, problemEnvironment.Status.Containers.Details) {
+		needToUpdateStatus = true
+	}
+
+	if needToUpdateStatus {
+		log.V(1).Info("updating container statuses",
+			"oldContainerStatuses", problemEnvironment.Status.Containers,
+			"containerStatuses", containerDetailStatuses,
+		)
+
+		problemEnvironment.Status.Containers = &netconv1alpha1.ContainersStatus{
+			Summary: r.generateContainersStatusSummary(containerDetailStatuses),
+			Details: containerDetailStatuses,
+		}
+
+		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: StatusRefreshInterval})
+	}
+
+	return ctrl.Result{RequeueAfter: StatusRefreshInterval}, nil
+}
+
 func (r *ProblemEnvironmentReconciler) ensureInstance(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
@@ -189,30 +220,15 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 
 	switch status {
 	case drivers.StatusReady:
-		needToUpdateStatus := false
-		if problemEnvironment.Status.Containers == nil {
-			needToUpdateStatus = true
-		} else if !reflect.DeepEqual(containerDetailStatuses, problemEnvironment.Status.Containers.Details) {
-			needToUpdateStatus = true
-		}
-
-		if needToUpdateStatus {
-			log.V(1).Info("updating container statuses",
-				"oldContainerStatuses", problemEnvironment.Status.Containers,
-				"containerStatuses", containerDetailStatuses,
-			)
-
-			problemEnvironment.Status.Containers = &netconv1alpha1.ContainersStatus{
-				Summary: r.generateContainersStatusSummary(containerDetailStatuses),
-				Details: containerDetailStatuses,
-			}
-
-			return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: StatusRefreshInterval})
-		}
-
-		return ctrl.Result{RequeueAfter: StatusRefreshInterval}, nil
+		return r.updateContainerStatus(ctx, problemEnvironment, containerDetailStatuses)
 	case drivers.StatusNotReady:
-		if err := r.driver.Deploy(ctx, r.Client, *problemEnvironment); err != nil {
+		err := r.driver.Deploy(ctx, r.Client, *problemEnvironment)
+		status, containerDetailStatuses := r.driver.Check(ctx, r.Client, *problemEnvironment)
+
+		switch status {
+		case drivers.StatusReady:
+			return r.updateContainerStatus(ctx, problemEnvironment, containerDetailStatuses)
+		case drivers.StatusNotReady:
 			message := "failed to deploy ProblemEnvironment"
 			log.Error(err, message)
 			util.SetProblemEnvironmentCondition(
