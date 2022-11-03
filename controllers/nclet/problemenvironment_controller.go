@@ -213,7 +213,6 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	// TODO(proelbtn): instantiate
 	status, containerDetailStatuses := r.driver.Check(ctx, r.Client, *problemEnvironment)
 
 	log.V(1).Info("checked the status of ProblemEnvironment", "status", status)
