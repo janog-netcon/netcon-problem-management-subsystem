@@ -16,7 +16,7 @@ const (
 )
 
 type ProblemEnvironmentDriver interface {
-	// Check checks whether problemEnvironment is working or not
+	// Checks whether problemEnvironment is working or not
 	// Note that even if status returned from Check is *StatusReady*, it doesn't mean all containers are running successfully.
 	// So, you need to check ContainerDetailStatus to ensure all containers are running.
 	Check(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus)
