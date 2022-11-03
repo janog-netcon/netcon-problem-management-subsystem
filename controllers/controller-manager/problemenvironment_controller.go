@@ -156,14 +156,18 @@ func (r *ProblemEnvironmentReconciler) schedule(
 	if len(workerNameProbEnvCountsMap) == 0 {
 		problemEnvironment.Spec.WorkerName = workers.Items[0].Name
 	} else {
-		keys := make([]string, 0, len(workerNameProbEnvCountsMap))
-
-		// sort by the num of probenv in a worker
-		for k := range workerNameProbEnvCountsMap {
-			keys = append(keys, k)
+		type kv struct {
+			Key   string
+			Value int
 		}
-		sort.Strings(keys)
-		problemEnvironment.Spec.WorkerName = keys[0]
+		ss := make([]kv, 0, len(workerNameProbEnvCountsMap))
+		for k, v := range workerNameProbEnvCountsMap {
+			ss = append(ss, kv{k, v})
+		}
+		sort.Slice(ss, func(i, j int) bool {
+			return ss[i].Value < ss[j].Value
+		})
+		problemEnvironment.Spec.WorkerName = ss[0].Key
 		log.V(1).Info("elected workerName " + problemEnvironment.Spec.WorkerName)
 	}
 
