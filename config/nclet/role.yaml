@@ -21,6 +21,16 @@ rules:
   - get
   - list
   - watch
+  - create
+  - update
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - workers/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - netcon.janog.gr.jp
   resources:
