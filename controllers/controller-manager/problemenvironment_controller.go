@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,8 +138,38 @@ func (r *ProblemEnvironmentReconciler) schedule(
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
 	}
 
-	// TODO(proelbtn): more intelligent scheduling algorithm
-	problemEnvironment.Spec.WorkerName = workers.Items[0].Name
+	problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
+	if err := r.List(ctx, &problemEnvironments); err != nil {
+		message := "failed to list ProblemEnvironments"
+		log.Error(err, message)
+		// TODO: handle error
+	}
+
+	workerNameProbEnvCountsMap := make(map[string]int)
+	for i := 0; i < len(problemEnvironments.Items); i++ {
+		if problemEnvironments.Items[i].Spec.WorkerName != "" {
+			key := problemEnvironments.Items[i].Spec.WorkerName
+			workerNameProbEnvCountsMap[key] = workerNameProbEnvCountsMap[key] + 1
+		}
+	}
+	// there is no key-value pairs when getting started
+	if len(workerNameProbEnvCountsMap) == 0 {
+		problemEnvironment.Spec.WorkerName = workers.Items[0].Name
+	} else {
+		type kv struct {
+			Key   string
+			Value int
+		}
+		ss := make([]kv, 0, len(workerNameProbEnvCountsMap))
+		for k, v := range workerNameProbEnvCountsMap {
+			ss = append(ss, kv{k, v})
+		}
+		sort.Slice(ss, func(i, j int) bool {
+			return ss[i].Value < ss[j].Value
+		})
+		problemEnvironment.Spec.WorkerName = ss[0].Key
+		log.V(1).Info("elected workerName " + problemEnvironment.Spec.WorkerName)
+	}
 
 	log.Info("scheduled", "newWorkerName", problemEnvironment.Spec.WorkerName)
 	return r.update(ctx, problemEnvironment, ctrl.Result{})

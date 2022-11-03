@@ -76,8 +76,8 @@ func main() {
 	}
 
 	driver := drivers.NewContainerLabProblemEnvironmentDriver()
-  
-  workerName, err := os.Hostname()
+
+	workerName, err := os.Hostname()
 	if err != nil {
 		setupLog.Error(err, "failed to get hostname")
 		os.Exit(1)
@@ -86,7 +86,7 @@ func main() {
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr, driver); err != nil {
+	}).SetupWithManager(mgr, workerName, driver); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProblemEnvironment")
 		os.Exit(1)
 	}
