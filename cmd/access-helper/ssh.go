@@ -22,7 +22,7 @@ func init() {
 const AccessMethodSSH AccessMethod = "ssh"
 
 const (
-	UserNameKey = "netcon.janog.gr.jp/userName"
+	UserNameKey = "netcon.janog.gr.jp/username"
 	PasswordKey = "netcon.janog.gr.jp/password"
 	PortKey     = "netcon.janog.gr.jp/port"
 )

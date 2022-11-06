@@ -31,7 +31,7 @@ topology:
         PASSWORD_ACCESS: true
       labels:
         netcon.janog.gr.jp/accessMethod: ssh
-        netcon.janog.gr.jp/userName: netcon
+        netcon.janog.gr.jp/username: netcon
         netcon.janog.gr.jp/password: netcon123
         netcon.janog.gr.jp/port: 2222
   links:
@@ -90,7 +90,7 @@ You can change how to access nodes with this label. Here are the acceptable valu
 
 If you don't set this label, "exec" access method will be used.
 
-### `netcon.janog.gr.jp/userName`
+### `netcon.janog.gr.jp/username`
 
 You can set user name for SSH with this label. This label will be ignored when you use "exec" access method.
 
