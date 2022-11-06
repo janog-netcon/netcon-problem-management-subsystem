@@ -11,13 +11,15 @@ import (
 type ProblemEnvironmentStatus string
 
 const (
-	StatusUnknown ProblemEnvironmentStatus = "Unknown"
-	StatusUp      ProblemEnvironmentStatus = "Up"
-	StatusDown    ProblemEnvironmentStatus = "Down"
+	StatusReady    ProblemEnvironmentStatus = "Ready"
+	StatusNotReady ProblemEnvironmentStatus = "NotReady"
 )
 
 type ProblemEnvironmentDriver interface {
-	Check(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus, error)
+	// Checks whether problemEnvironment is working or not
+	// Note that even if status returned from Check is *StatusReady*, it doesn't mean all containers are running successfully.
+	// So, you need to check ContainerDetailStatus to ensure all containers are running.
+	Check(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus)
 	Deploy(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) error
 	Destroy(ctx context.Context, reader client.Reader, problemEnvironment netconv1alpha1.ProblemEnvironment) error
 }
