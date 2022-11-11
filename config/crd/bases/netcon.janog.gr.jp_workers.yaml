@@ -41,9 +41,12 @@ spec:
                     type: string
                   hostname:
                     type: string
+                  memoryUsedPercent:
+                    type: string
                 required:
                 - externalIPAddress
                 - hostname
+                - memoryUsedPercent
                 type: object
             required:
             - workerInfo

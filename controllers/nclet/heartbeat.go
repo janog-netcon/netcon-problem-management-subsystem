@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"os"
+	"strconv"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	mem "github.com/shirou/gopsutil/v3/mem"
+	// cpu "github.com/shirou/gopsutil/v3/cpu"
 )
 
 type HeartbeatAgent struct {
@@ -104,9 +107,12 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 			// TODO: resolve external IP address used by users to access
 			externalIPAddress := "..."
 
+			virtualMemory, _ := mem.VirtualMemory()
+
 			worker.Status.WorkerInfo = netconv1alpha1.WorkerInfo{
 				Hostname:          hostname,
 				ExternalIPAddress: externalIPAddress,
+				MemoryUsedPercent: strconv.FormatFloat(virtualMemory.UsedPercent, 'f', -1, 64),
 			}
 
 			if err := a.Status().Update(ctx, &worker); err != nil {
