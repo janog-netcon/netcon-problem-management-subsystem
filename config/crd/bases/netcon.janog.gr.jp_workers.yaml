@@ -37,6 +37,8 @@ spec:
             properties:
               workerInfo:
                 properties:
+                  cpuUsedPercent:
+                    type: string
                   externalIPAddress:
                     type: string
                   hostname:
@@ -44,6 +46,7 @@ spec:
                   memoryUsedPercent:
                     type: string
                 required:
+                - cpuUsedPercent
                 - externalIPAddress
                 - hostname
                 - memoryUsedPercent
