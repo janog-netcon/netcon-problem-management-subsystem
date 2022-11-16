@@ -113,7 +113,7 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 				continue
 			}
 
-			cpuUsedPercents, err := cpu.Percent(time.Second, false)
+			cpuUsedPercents, err := cpu.Percent(time.Minute, false)
 			if err != nil {
 				log.Error(err, "failed to get CPUUsedPercent")
 				continue
