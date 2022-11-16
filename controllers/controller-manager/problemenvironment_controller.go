@@ -100,6 +100,36 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 	return ctrl.Result{}, nil
 }
 
+func (r *ProblemEnvironmentReconciler) electWorker(
+	workers netconv1alpha1.WorkerList,
+	problemEnvironments netconv1alpha1.ProblemEnvironmentList,
+) string {
+	workerNameProbEnvCountsMap := make(map[string]int)
+	for i := 0; i < len(problemEnvironments.Items); i++ {
+		if problemEnvironments.Items[i].Spec.WorkerName != "" {
+			key := problemEnvironments.Items[i].Spec.WorkerName
+			workerNameProbEnvCountsMap[key] = workerNameProbEnvCountsMap[key] + 1
+		}
+	}
+	// there is no key-value pairs when getting started
+	if len(workerNameProbEnvCountsMap) == 0 {
+		return workers.Items[0].Name
+	} else {
+		type kv struct {
+			Key   string
+			Value int
+		}
+		ss := make([]kv, 0, len(workerNameProbEnvCountsMap))
+		for k, v := range workerNameProbEnvCountsMap {
+			ss = append(ss, kv{k, v})
+		}
+		sort.Slice(ss, func(i, j int) bool {
+			return ss[i].Value < ss[j].Value
+		})
+		return ss[0].Key
+	}
+}
+
 func (r *ProblemEnvironmentReconciler) schedule(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
@@ -145,31 +175,7 @@ func (r *ProblemEnvironmentReconciler) schedule(
 		// TODO: handle error
 	}
 
-	workerNameProbEnvCountsMap := make(map[string]int)
-	for i := 0; i < len(problemEnvironments.Items); i++ {
-		if problemEnvironments.Items[i].Spec.WorkerName != "" {
-			key := problemEnvironments.Items[i].Spec.WorkerName
-			workerNameProbEnvCountsMap[key] = workerNameProbEnvCountsMap[key] + 1
-		}
-	}
-	// there is no key-value pairs when getting started
-	if len(workerNameProbEnvCountsMap) == 0 {
-		problemEnvironment.Spec.WorkerName = workers.Items[0].Name
-	} else {
-		type kv struct {
-			Key   string
-			Value int
-		}
-		ss := make([]kv, 0, len(workerNameProbEnvCountsMap))
-		for k, v := range workerNameProbEnvCountsMap {
-			ss = append(ss, kv{k, v})
-		}
-		sort.Slice(ss, func(i, j int) bool {
-			return ss[i].Value < ss[j].Value
-		})
-		problemEnvironment.Spec.WorkerName = ss[0].Key
-		log.V(1).Info("elected workerName " + problemEnvironment.Spec.WorkerName)
-	}
+	problemEnvironment.Spec.WorkerName = r.electWorker(workers, problemEnvironments)
 
 	log.Info("scheduled", "newWorkerName", problemEnvironment.Spec.WorkerName)
 	return r.update(ctx, problemEnvironment, ctrl.Result{})
