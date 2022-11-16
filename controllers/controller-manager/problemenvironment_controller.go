@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"sort"
+	"strconv"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +38,10 @@ type ProblemEnvironmentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
+
+const (
+	MAX_USED_PERCENT float64 = 100.0
+)
 
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments/status,verbs=get;update;patch
@@ -101,33 +106,44 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 }
 
 func (r *ProblemEnvironmentReconciler) electWorker(
+	ctx context.Context,
 	workers netconv1alpha1.WorkerList,
 	problemEnvironments netconv1alpha1.ProblemEnvironmentList,
 ) string {
-	workerNameProbEnvCountsMap := make(map[string]int)
-	for i := 0; i < len(problemEnvironments.Items); i++ {
-		if problemEnvironments.Items[i].Spec.WorkerName != "" {
-			key := problemEnvironments.Items[i].Spec.WorkerName
-			workerNameProbEnvCountsMap[key] = workerNameProbEnvCountsMap[key] + 1
-		}
-	}
-	// there is no key-value pairs when getting started
-	if len(workerNameProbEnvCountsMap) == 0 {
+	log := log.FromContext(ctx)
+
+	workerLength := len(workers.Items)
+	if workerLength < 2 {
+		// at least 1 worker must exist
 		return workers.Items[0].Name
-	} else {
-		type kv struct {
-			Key   string
-			Value int
-		}
-		ss := make([]kv, 0, len(workerNameProbEnvCountsMap))
-		for k, v := range workerNameProbEnvCountsMap {
-			ss = append(ss, kv{k, v})
-		}
-		sort.Slice(ss, func(i, j int) bool {
-			return ss[i].Value < ss[j].Value
-		})
-		return ss[0].Key
 	}
+
+	type WorkerResource struct {
+		Name                      string
+		CPUUsedPercent            float64
+		MemoryUsedPercent         float64
+		SumOfResourcesUsedPercent float64
+	}
+	arr := make([]WorkerResource, 0, workerLength)
+	for i := 0; i < workerLength; i++ {
+		cpuUsedPct, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.CPUUsedPercent, 64)
+		if err != nil {
+			log.Error(err, "failed to parse CPUUsedPercent for worker election")
+			cpuUsedPct = MAX_USED_PERCENT
+		}
+		memoryUsedPercent, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.MemoryUsedPercent, 64)
+		if err != nil {
+			log.Error(err, "failed to parse CPUUsedPercent for worker election")
+			memoryUsedPercent = MAX_USED_PERCENT
+		}
+		sumOfResourcesUsedPercent := cpuUsedPct + memoryUsedPercent
+
+		arr = append(arr, WorkerResource{workers.Items[i].Name, cpuUsedPct, memoryUsedPercent, sumOfResourcesUsedPercent})
+	}
+	sort.Slice(workers, func(i, j int) bool {
+		return arr[i].SumOfResourcesUsedPercent < arr[j].SumOfResourcesUsedPercent
+	})
+	return arr[0].Name
 }
 
 func (r *ProblemEnvironmentReconciler) schedule(
@@ -175,7 +191,7 @@ func (r *ProblemEnvironmentReconciler) schedule(
 		// TODO: handle error
 	}
 
-	problemEnvironment.Spec.WorkerName = r.electWorker(workers, problemEnvironments)
+	problemEnvironment.Spec.WorkerName = r.electWorker(ctx, workers, problemEnvironments)
 
 	log.Info("scheduled", "newWorkerName", problemEnvironment.Spec.WorkerName)
 	return r.update(ctx, problemEnvironment, ctrl.Result{})
