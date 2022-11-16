@@ -113,15 +113,16 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 	log := log.FromContext(ctx)
 
 	workerLength := len(workers.Items)
-	if workerLength < 2 {
-		// at least 1 worker must exist
+	if workerLength == 0 {
+		return ""
+	} else if workerLength < 2 {
 		return workers.Items[0].Name
 	}
 
 	type WorkerResource struct {
-		Name                      string
-		CPUUsedPercent            float64
-		MemoryUsedPercent         float64
+		Name string
+		// CPUUsedPercent            float64
+		// MemoryUsedPercent         float64
 		SumOfResourcesUsedPercent float64
 	}
 	arr := make([]WorkerResource, 0, workerLength)
@@ -133,16 +134,19 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 		}
 		memoryUsedPercent, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.MemoryUsedPercent, 64)
 		if err != nil {
-			log.Error(err, "failed to parse CPUUsedPercent for worker election")
+			log.Error(err, "failed to parse MemoryUsedPercent for worker election")
 			memoryUsedPercent = MAX_USED_PERCENT
 		}
 		sumOfResourcesUsedPercent := cpuUsedPct + memoryUsedPercent
 
-		arr = append(arr, WorkerResource{workers.Items[i].Name, cpuUsedPct, memoryUsedPercent, sumOfResourcesUsedPercent})
+		arr = append(arr, WorkerResource{workers.Items[i].Name, sumOfResourcesUsedPercent})
 	}
-	sort.Slice(workers, func(i, j int) bool {
+	sort.Slice(arr, func(i, j int) bool {
 		return arr[i].SumOfResourcesUsedPercent < arr[j].SumOfResourcesUsedPercent
 	})
+
+	log.Info("electWorker : " + arr[0].Name)
+
 	return arr[0].Name
 }
 
@@ -191,9 +195,15 @@ func (r *ProblemEnvironmentReconciler) schedule(
 		// TODO: handle error
 	}
 
-	problemEnvironment.Spec.WorkerName = r.electWorker(ctx, workers, problemEnvironments)
+	electedWorkerName := r.electWorker(ctx, workers, problemEnvironments)
 
-	log.Info("scheduled", "newWorkerName", problemEnvironment.Spec.WorkerName)
+	if electedWorkerName != "" {
+		problemEnvironment.Spec.WorkerName = electedWorkerName
+	} else {
+		message := "failed to elect worker for scheduling"
+		log.Info(message)
+	}
+
 	return r.update(ctx, problemEnvironment, ctrl.Result{})
 }
 
