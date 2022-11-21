@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"sort"
+	"strconv"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +38,10 @@ type ProblemEnvironmentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
+
+const (
+	MAX_USED_PERCENT float64 = 100.0
+)
 
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments/status,verbs=get;update;patch
@@ -100,6 +105,51 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 	return ctrl.Result{}, nil
 }
 
+func (r *ProblemEnvironmentReconciler) electWorker(
+	ctx context.Context,
+	workers netconv1alpha1.WorkerList,
+	problemEnvironments netconv1alpha1.ProblemEnvironmentList,
+) string {
+	log := log.FromContext(ctx)
+
+	workerLength := len(workers.Items)
+	if workerLength == 0 {
+		return ""
+	} else if workerLength < 2 {
+		return workers.Items[0].Name
+	}
+
+	type WorkerResource struct {
+		Name string
+		// CPUUsedPercent            float64
+		// MemoryUsedPercent         float64
+		SumOfResourcesUsedPercent float64
+	}
+	arr := make([]WorkerResource, 0, workerLength)
+	for i := 0; i < workerLength; i++ {
+		cpuUsedPct, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.CPUUsedPercent, 64)
+		if err != nil {
+			log.Error(err, "failed to parse CPUUsedPercent for worker election")
+			cpuUsedPct = MAX_USED_PERCENT
+		}
+		memoryUsedPercent, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.MemoryUsedPercent, 64)
+		if err != nil {
+			log.Error(err, "failed to parse MemoryUsedPercent for worker election")
+			memoryUsedPercent = MAX_USED_PERCENT
+		}
+		sumOfResourcesUsedPercent := cpuUsedPct + memoryUsedPercent
+
+		arr = append(arr, WorkerResource{workers.Items[i].Name, sumOfResourcesUsedPercent})
+	}
+	sort.Slice(arr, func(i, j int) bool {
+		return arr[i].SumOfResourcesUsedPercent < arr[j].SumOfResourcesUsedPercent
+	})
+
+	log.Info("electWorker : " + arr[0].Name)
+
+	return arr[0].Name
+}
+
 func (r *ProblemEnvironmentReconciler) schedule(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
@@ -145,33 +195,17 @@ func (r *ProblemEnvironmentReconciler) schedule(
 		// TODO: handle error
 	}
 
-	workerNameProbEnvCountsMap := make(map[string]int)
-	for i := 0; i < len(problemEnvironments.Items); i++ {
-		if problemEnvironments.Items[i].Spec.WorkerName != "" {
-			key := problemEnvironments.Items[i].Spec.WorkerName
-			workerNameProbEnvCountsMap[key] = workerNameProbEnvCountsMap[key] + 1
-		}
-	}
-	// there is no key-value pairs when getting started
-	if len(workerNameProbEnvCountsMap) == 0 {
-		problemEnvironment.Spec.WorkerName = workers.Items[0].Name
+	electedWorkerName := r.electWorker(ctx, workers, problemEnvironments)
+
+	if electedWorkerName != "" {
+		problemEnvironment.Spec.WorkerName = electedWorkerName
 	} else {
-		type kv struct {
-			Key   string
-			Value int
-		}
-		ss := make([]kv, 0, len(workerNameProbEnvCountsMap))
-		for k, v := range workerNameProbEnvCountsMap {
-			ss = append(ss, kv{k, v})
-		}
-		sort.Slice(ss, func(i, j int) bool {
-			return ss[i].Value < ss[j].Value
-		})
-		problemEnvironment.Spec.WorkerName = ss[0].Key
-		log.V(1).Info("elected workerName " + problemEnvironment.Spec.WorkerName)
+		// TODO: statusの Scheduled = Falseに更新する
+		// 更新せずとも、再reconcileが走るので問題はないはず
+		message := "failed to elect worker for scheduling"
+		log.Info(message)
 	}
 
-	log.Info("scheduled", "newWorkerName", problemEnvironment.Spec.WorkerName)
 	return r.update(ctx, problemEnvironment, ctrl.Result{})
 }
 

@@ -37,13 +37,19 @@ spec:
             properties:
               workerInfo:
                 properties:
+                  cpuUsedPercent:
+                    type: string
                   externalIPAddress:
                     type: string
                   hostname:
                     type: string
+                  memoryUsedPercent:
+                    type: string
                 required:
+                - cpuUsedPercent
                 - externalIPAddress
                 - hostname
+                - memoryUsedPercent
                 type: object
             required:
             - workerInfo

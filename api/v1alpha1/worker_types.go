@@ -28,6 +28,8 @@ type WorkerStatus struct {
 type WorkerInfo struct {
 	ExternalIPAddress string `json:"externalIPAddress"`
 	Hostname          string `json:"hostname"`
+	MemoryUsedPercent string `json:"memoryUsedPercent"`
+	CPUUsedPercent    string `json:"cpuUsedPercent"`
 }
 
 //+kubebuilder:object:root=true
