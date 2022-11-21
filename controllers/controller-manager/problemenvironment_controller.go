@@ -200,6 +200,8 @@ func (r *ProblemEnvironmentReconciler) schedule(
 	if electedWorkerName != "" {
 		problemEnvironment.Spec.WorkerName = electedWorkerName
 	} else {
+		// TODO: statusの Scheduled = Falseに更新する
+		// 更新せずとも、再reconcileが走るので問題はないはず
 		message := "failed to elect worker for scheduling"
 		log.Info(message)
 	}
