@@ -1,0 +1,28 @@
+name: test
+on:
+  push:
+    branches:
+      - master 
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  medium:
+    runs-on: [self-hosted]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          clean: false
+
+      - name: Set up Go 1.19.2
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.19.2
+
+      - name: run make test
+        run: |
+          make test
+        env:
+          LOCALBIN: '/home/sanosei/k8sbin'
