@@ -18,8 +18,10 @@ package controllers
 
 import (
 	"context"
+	"math/rand"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +49,15 @@ const (
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problems,verbs=get;list;watch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers,verbs=get;list;watch
+
+func generatePassword(length uint) string {
+	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	var b strings.Builder
+	for i := uint(0); i < length; i++ {
+		b.WriteRune(chars[rand.Intn(len(chars))])
+	}
+	return b.String()
+}
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -220,6 +231,7 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
+	statusUpdated := false
 
 	log.V(1).Info("fetching Worker scheduled")
 	worker := netconv1alpha1.Worker{}
@@ -240,13 +252,28 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
 	}
 
-	log.Info("confirmed", "workerName", problemEnvironment.Spec.WorkerName)
-	util.SetProblemEnvironmentCondition(
+	if util.GetProblemEnvironmentCondition(
 		problemEnvironment,
 		netconv1alpha1.ProblemEnvironmentConditionScheduled,
-		metav1.ConditionTrue,
-		"Scheduled", "ProblemEnvironment is assigned to Worker",
-	)
+	) != metav1.ConditionTrue {
+		log.Info("confirmed", "workerName", problemEnvironment.Spec.WorkerName)
+		util.SetProblemEnvironmentCondition(
+			problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionScheduled,
+			metav1.ConditionTrue,
+			"Scheduled", "ProblemEnvironment is assigned to Worker",
+		)
+		statusUpdated = true
+	}
+
+	if problemEnvironment.Status.Password == "" {
+		problemEnvironment.Status.Password = generatePassword(24)
+		statusUpdated = true
+	}
+
+	if !statusUpdated {
+		return ctrl.Result{}, nil
+	}
 	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
 }
 
