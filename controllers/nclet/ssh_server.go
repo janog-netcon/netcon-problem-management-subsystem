@@ -145,22 +145,22 @@ func (r *SSHServer) injectHostKeys(server *ssh.Server) error {
 	return nil
 }
 
-func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) (bool, error) {
+func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) bool {
 	user, err := parseUser(sCtx.User())
 	if err != nil {
-		return false, nil
+		return false
 	}
 
 	if user.Admin {
 		// TODO: password authentication for user
-		return true, nil
+		return true
 	} else {
 		problemEnvironment := netconv1alpha1.ProblemEnvironment{}
 		if err := r.Get(ctx, types.NamespacedName{
 			Namespace: "netcon",
 			Name:      user.ProblemEnvironmentName,
 		}, &problemEnvironment); err != nil {
-			return false, errors.New("user not found or password incorrect")
+			return false
 		}
 
 		if util.GetProblemEnvironmentCondition(
@@ -171,10 +171,10 @@ func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.C
 		}
 
 		if problemEnvironment.Status.Password != password {
-			return false, errors.New("user not found or password incorrect")
+			return false
 		}
 
-		return true, nil
+		return true
 	}
 }
 
@@ -208,17 +208,13 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
 }
 
 func (r *SSHServer) Start(ctx context.Context) error {
-	log := log.FromContext(ctx)
+	_ = log.FromContext(ctx)
 
 	server := &ssh.Server{
 		Addr: ":2222",
 		PasswordHandler: func(sctx ssh.Context, password string) bool {
-			ok, err := r.handlePasswordAuthentication(ctx, sctx, password)
-			if err != nil {
-				log.Error(err, "failed to handle password-based authentication")
-				return false
-			}
-			return ok
+			// TODO: Add logging
+			return r.handlePasswordAuthentication(ctx, sctx, password)
 		},
 		Handler: func(s ssh.Session) {
 			r.handle(ctx, s)
