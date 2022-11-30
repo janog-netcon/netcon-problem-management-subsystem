@@ -199,14 +199,20 @@ func (r *ProblemEnvironmentReconciler) schedule(
 
 	if electedWorkerName != "" {
 		problemEnvironment.Spec.WorkerName = electedWorkerName
+		return r.update(ctx, problemEnvironment, ctrl.Result{})
 	} else {
-		// TODO: statusの Scheduled = Falseに更新する
-		// 更新せずとも、再reconcileが走るので問題はないはず
+		reason := "ScheduleFailed"
 		message := "failed to elect worker for scheduling"
 		log.Info(message)
+		util.SetProblemEnvironmentCondition(
+			problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionScheduled,
+			metav1.ConditionFalse,
+			reason,
+			message,
+		)
+		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
 	}
-
-	return r.update(ctx, problemEnvironment, ctrl.Result{})
 }
 
 func (r *ProblemEnvironmentReconciler) confirmSchedule(
