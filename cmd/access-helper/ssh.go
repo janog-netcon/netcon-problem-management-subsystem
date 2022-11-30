@@ -22,9 +22,19 @@ func init() {
 const AccessMethodSSH AccessMethod = "ssh"
 
 const (
-	UserNameKey = "netcon.janog.gr.jp/username"
-	PasswordKey = "netcon.janog.gr.jp/password"
-	PortKey     = "netcon.janog.gr.jp/port"
+	usernameKey = "netcon.janog.gr.jp/username"
+
+	passwordKey = "netcon.janog.gr.jp/password"
+
+	portKey            = "netcon.janog.gr.jp/port"
+	defaultPort uint16 = 22
+)
+
+// defaultUsername and defaultPassword should be override when building access-helper with -ldflags
+// ref: https://uokada.hatenablog.jp/entry/2015/05/20/001208
+var (
+	defaultUsername string
+	defaultPassword string
 )
 
 type SSHAccessHelper struct {
@@ -33,23 +43,26 @@ type SSHAccessHelper struct {
 func (h *SSHAccessHelper) loadParameters(
 	nodeDefinition containerlab.NodeDefinition,
 ) (string, string, uint16, error) {
-	userName, ok := nodeDefinition.Labels[UserNameKey]
-	if !ok {
-		return "", "", 0, errors.New("username not found")
+	username := defaultUsername
+	if v, ok := nodeDefinition.Labels[usernameKey]; ok {
+		username = v
 	}
 
-	password, ok := nodeDefinition.Labels[PasswordKey]
-	if !ok {
-		return "", "", 0, errors.New("password not found")
+	password := defaultPassword
+	if v, ok := nodeDefinition.Labels[passwordKey]; ok {
+		password = v
 	}
 
-	portRaw, ok := nodeDefinition.Labels[PortKey]
-	if !ok {
-		return "", "", 0, errors.New("port not found")
+	port := defaultPort
+	if v, ok := nodeDefinition.Labels[portKey]; ok {
+		p, err := strconv.ParseUint(v, 10, 16)
+		if err != nil {
+			return "", "", 0, errors.Errorf("could not parse port")
+		}
+		port = uint16(p)
 	}
 
-	port, err := strconv.ParseUint(portRaw, 10, 16)
-	return userName, password, uint16(port), err
+	return username, password, port, nil
 }
 
 func (h *SSHAccessHelper) _access(

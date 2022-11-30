@@ -1,7 +1,5 @@
 # Build the manager binary
 FROM golang:1.19 as builder
-ARG TARGETOS
-ARG TARGETARCH
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -23,6 +21,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o nc
 # Build the manager binary
 FROM golang:1.19 as access-helper_builder
 
+ARG DEFAULT_USERNAME
+ARG DEFAULT_PASSWORD
+
 WORKDIR /workspace
 COPY go.mod go.mod
 COPY go.sum go.sum
@@ -33,7 +34,8 @@ COPY cmd/access-helper cmd/access-helper
 COPY pkg/ pkg/
 
 # Build
-RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o access-helper ./cmd/access-helper
+RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 \
+    go build -o access-helper -ldflags="-X main.defaultUsername=${DEFAULT_USERNAME} -X main.defaultPassword=${DEFAULT_PASSWORD}" ./cmd/access-helper
 
 FROM nicolaka/netshoot:v0.7
 WORKDIR /

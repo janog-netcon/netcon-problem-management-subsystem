@@ -60,7 +60,7 @@ func accessNode(
 		return errors.New("node defined, but not working")
 	}
 
-	accessMethod := AccessMethodExec
+	accessMethod := AccessMethodSSH
 	if value, ok := nodeDefinition.Labels[AccessMethodKey]; ok {
 		accessMethod = AccessMethod(value)
 	}
