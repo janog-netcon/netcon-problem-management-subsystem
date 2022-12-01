@@ -15,6 +15,8 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/pkg/errors"
 	gossh "golang.org/x/crypto/ssh"
@@ -23,6 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
 
 type User struct {
@@ -140,15 +145,37 @@ func (r *SSHServer) injectHostKeys(server *ssh.Server) error {
 	return nil
 }
 
-func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) (bool, error) {
-	_, err := parseUser(sCtx.User())
+func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) bool {
+	user, err := parseUser(sCtx.User())
 	if err != nil {
-		return false, nil
+		return false
 	}
 
-	// TODO: implement password authentication
+	if user.Admin {
+		// TODO: password authentication for user
+		return true
+	} else {
+		problemEnvironment := netconv1alpha1.ProblemEnvironment{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Namespace: "netcon",
+			Name:      user.ProblemEnvironmentName,
+		}, &problemEnvironment); err != nil {
+			return false
+		}
 
-	return true, nil
+		if util.GetProblemEnvironmentCondition(
+			&problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionAssigned,
+		) != metav1.ConditionTrue {
+			// TODO(proelbtn): Gateway is not found now. So, I bypassed "Assigned" check
+		}
+
+		if problemEnvironment.Status.Password != password {
+			return false
+		}
+
+		return true
+	}
 }
 
 func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
@@ -181,17 +208,13 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
 }
 
 func (r *SSHServer) Start(ctx context.Context) error {
-	log := log.FromContext(ctx)
+	_ = log.FromContext(ctx)
 
 	server := &ssh.Server{
 		Addr: ":2222",
 		PasswordHandler: func(sctx ssh.Context, password string) bool {
-			ok, err := r.handlePasswordAuthentication(ctx, sctx, password)
-			if err != nil {
-				log.Error(err, "failed to handle password-based authentication")
-				return false
-			}
-			return ok
+			// TODO: Add logging
+			return r.handlePasswordAuthentication(ctx, sctx, password)
 		},
 		Handler: func(s ssh.Session) {
 			r.handle(ctx, s)

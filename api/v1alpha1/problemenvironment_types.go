@@ -55,7 +55,10 @@ type ConfigMapFileSource struct {
 
 // ProblemEnvironmentStatus defines the observed state of ProblemEnvironment
 type ProblemEnvironmentStatus struct {
-	Containers *ContainersStatus  `json:"containers,omitempty"`
+	Containers *ContainersStatus `json:"containers,omitempty"`
+
+	Password string `json:"password,omitempty"`
+
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
@@ -78,7 +81,8 @@ type ContainerDetailStatus struct {
 //+kubebuilder:printcolumn:name=SCHEDULED,type=string,JSONPath=.status.conditions[?(@.type=="Scheduled")].status
 //+kubebuilder:printcolumn:name=READY,type=string,JSONPath=.status.conditions[?(@.type=="Ready")].status
 //+kubebuilder:printcolumn:name=ASSIGNED,type=string,JSONPath=.status.conditions[?(@.type=="Assigned")].status
-//+kubebuilder:printcolumn:name=CONTAINERS,type=string,JSONPath=.status.containers.summary
+//+kubebuilder:printcolumn:name=CONTAINERS,type=string,JSONPath=.status.containers.summary,priority=1
+//+kubebuilder:printcolumn:name=PASSWORD,type=string,JSONPath=.status.password,priority=1
 
 // ProblemEnvironment is the Schema for the problemenvironments API
 type ProblemEnvironment struct {
