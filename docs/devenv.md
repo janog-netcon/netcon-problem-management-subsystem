@@ -114,16 +114,4 @@ docker run -d --name nclet \
     netcon-pms-nclet:dev
 ```
 
-After then, you need to create Worker resource to work with dummy scheduler.
-
-```
-kubectl apply -f - <<EOF
-apiVersion: netcon.janog.gr.jp/v1alpha1
-kind: Worker
-metadata:
-  namespace: netcon
-  name: worker001
-EOF
-```
-
 Now, you can deploy ContainerLab environment with this system. To try it, apply `./config/samples/netcon_v1alpha1_problemenvironment.yaml`.
