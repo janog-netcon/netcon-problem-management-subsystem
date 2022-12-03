@@ -88,7 +88,13 @@ You can change how to access nodes with this label. Here are the acceptable valu
 1. "exec": access nodes with `docker exec`
 2. "ssh": access nodes through SSH
 
-If you don't set this label, "exec" access method will be used.
+If you don't set this label, "ssh" access method will be used.
+
+### `netcon.janog.gr.jp/adminOnly`
+
+You can reject access from normal user to specific nodes with this label. "true" is the only acceptable value and other values will be considered as "false".
+
+If you don't set this label, both normal user and admin user can access nodes.
 
 ### `netcon.janog.gr.jp/username`
 
@@ -100,4 +106,4 @@ You can set password for SSH with this label. This label will be ignored when yo
 
 ### `netcon.janog.gr.jp/port`
 
-You can set password for SSH with this label. This label will be ignored when you use "exec" access method.
+You can set password for SSH with this label. This label will be ignored when you use "exec" access method. If you don't set this label, 22/tcp is used to access nodes.
