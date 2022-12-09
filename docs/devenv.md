@@ -79,6 +79,7 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 Then, you can build and install controller-manager with these commands.
 
 ```
+git submodule update --init
 make controller-manager-docker-build nclet-docker-build
 make controller-manager-kind-push
 ```
