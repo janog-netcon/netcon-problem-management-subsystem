@@ -186,13 +186,17 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
 
 	topologyFilePath := path.Join("data", user.ProblemEnvironmentName, "manifest.yml")
 
-	var cmd *exec.Cmd
+	args := []string{"-t", topologyFilePath}
+
+	if user.Admin {
+		args = append(args, "--admin")
+	}
 
 	if user.NodeName != "" {
-		cmd = exec.Command("access-helper", "-t", topologyFilePath, user.NodeName)
-	} else {
-		cmd = exec.Command("access-helper", "-t", topologyFilePath)
+		args = append(args, user.NodeName)
 	}
+
+	cmd := exec.Command("access-helper", args...)
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {

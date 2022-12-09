@@ -16,6 +16,7 @@ import (
 
 const (
 	AccessMethodKey = "netcon.janog.gr.jp/accessMethod"
+	AdminOnlyKey    = "netcon.janog.gr.jp/adminOnly"
 )
 
 func accessNode(
@@ -23,9 +24,16 @@ func accessNode(
 	client *containerlab.ContainerLabClient,
 	config *containerlab.Config,
 	nodeName string,
+	isAdmin bool,
 ) error {
 	nodeDefinition, ok := config.Topology.Nodes[nodeName]
 	if !ok || nodeDefinition == nil {
+		fmt.Printf("no such node: \"%s\"", nodeName)
+		return nil
+	}
+
+	// if adminOnly is "true", normal user can't access such node
+	if nodeDefinition.Labels[AdminOnlyKey] == "true" && !isAdmin {
 		fmt.Printf("no such node: \"%s\"", nodeName)
 		return nil
 	}
@@ -74,6 +82,7 @@ func accessNode(
 
 func main() {
 	var topologyFilePath string
+	var isAdmin bool
 
 	cmd := cobra.Command{
 		Use: path.Base(os.Args[0]),
@@ -105,11 +114,12 @@ func main() {
 				return nil
 			}
 
-			return accessNode(ctx, client, config, nodeName)
+			return accessNode(ctx, client, config, nodeName, isAdmin)
 		},
 	}
 
 	cmd.PersistentFlags().StringVarP(&topologyFilePath, "topo", "t", "", "path to the topology file")
+	cmd.PersistentFlags().BoolVar(&isAdmin, "admin", false, "whether access user is admin or not")
 
 	if err := cmd.ExecuteContext(context.TODO()); err != nil {
 		os.Exit(1)
