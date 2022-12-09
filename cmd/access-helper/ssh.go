@@ -75,10 +75,18 @@ func (h *SSHAccessHelper) _access(
 		return 0, err
 	}
 
+	// TODO: change ClientConfig for node kind
 	config := &ssh.ClientConfig{
 		User: userName,
 		Auth: []ssh.AuthMethod{
 			ssh.Password(password),
+			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
+				answers := make([]string, len(questions))
+				for i, _ := range answers {
+					answers[i] = password
+				}
+				return answers, nil
+			}),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
