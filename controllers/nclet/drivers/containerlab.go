@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
@@ -107,27 +108,27 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 // Check implements ProblemEnvironmentDriver
 func (d *ContainerLabProblemEnvironmentDriver) Check(
 	ctx context.Context,
-	reader client.Client,
+	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus) {
 	log := log.FromContext(ctx)
 
-	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
+	clabClient := containerlab.NewContainerLabClientFor(&problemEnvironment)
 
-	directoryPath := client.WorkingDirectoryPath()
+	directoryPath := clabClient.WorkingDirectoryPath()
 	if !d.fileExists(directoryPath) {
 		// directory not found, ProblemEnvironment haven't been created
 		log.V(1).Info("working directory not found, skip to inspect")
 		return StatusNotReady, nil
 	}
 
-	topologyFilePath := client.TopologyFilePath()
+	topologyFilePath := clabClient.TopologyFilePath()
 	if !d.fileExists(topologyFilePath) {
 		log.V(1).Info("topology file not found, skip to inspect")
 		return StatusNotReady, nil
 	}
 
-	labData, err := client.Inspect(ctx)
+	labData, err := clabClient.Inspect(ctx)
 	if err != nil {
 		log.Error(err, "failed to inspect ContainerLab")
 		return StatusNotReady, nil
@@ -155,54 +156,80 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 // Deploy implements ProblemEnvironmentDriver
 func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 	ctx context.Context,
-	reader client.Client,
+	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
 	log := log.FromContext(ctx)
 
-	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
+	clabClient := containerlab.NewContainerLabClientFor(&problemEnvironment)
 
-	topologyFile, err := d.getTopologyFileFor(ctx, reader, &problemEnvironment)
+	topologyFile, err := d.getTopologyFileFor(ctx, client, &problemEnvironment)
 	if err != nil {
 		return err
 	}
 
-	directoryPath := client.WorkingDirectoryPath()
+	directoryPath := clabClient.WorkingDirectoryPath()
 	log.V(1).Info("ensuring directory for ProblemEnvironment", "path", directoryPath)
 	if err := d.ensureDirectory(directoryPath); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	topologyFilePath := client.TopologyFilePath()
+	topologyFilePath := clabClient.TopologyFilePath()
 	log.V(1).Info("creating topology file", "path", topologyFilePath)
 	if _, err := d.createOrUpdateFile(topologyFilePath, []byte(topologyFile)); err != nil {
 		return fmt.Errorf("failed to create or update topology file: %w", err)
 	}
 
-	if err := client.Deploy(ctx); err != nil {
-		return fmt.Errorf("failed to deploy ContainerLab: %w", err)
+	stdout, stderr, err := clabClient.DeployWithOutput(ctx)
+	if err := d.recordDeployLog(ctx, client, &problemEnvironment, stdout, stderr); err != nil {
+		log.Info("failed to record deploy log")
 	}
 
-	return nil
+	return err
+}
+
+func (d *ContainerLabProblemEnvironmentDriver) recordDeployLog(
+	ctx context.Context,
+	client client.Client,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	stdout, stderr []byte,
+) error {
+	configMap := corev1.ConfigMap{}
+	configMap.Namespace = problemEnvironment.Namespace
+	configMap.Name = fmt.Sprintf("deploy-%s", problemEnvironment.Name)
+	configMap.Data = map[string]string{
+		"stdout": string(stdout),
+		"stderr": string(stderr),
+	}
+
+	if err := controllerutil.SetOwnerReference(
+		problemEnvironment,
+		&configMap,
+		client.Scheme(),
+	); err != nil {
+		return err
+	}
+
+	return client.Create(ctx, &configMap)
 }
 
 // Destroy implements ProblemEnvironmentDriver
 func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 	ctx context.Context,
-	reader client.Client,
+	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
-	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
+	clabClient := containerlab.NewContainerLabClientFor(&problemEnvironment)
 
-	status, _ := d.Check(ctx, reader, problemEnvironment)
+	status, _ := d.Check(ctx, client, problemEnvironment)
 
 	if status == StatusReady {
-		if err := client.Destroy(ctx); err != nil {
+		if err := clabClient.Destroy(ctx); err != nil {
 			return fmt.Errorf("failed to destroy ContainerLab: %w", err)
 		}
 	}
 
-	directoryPath := client.WorkingDirectoryPath()
+	directoryPath := clabClient.WorkingDirectoryPath()
 	if _, err := d.delete(directoryPath); err != nil {
 		return fmt.Errorf("failed to delete directory for ProblemEnvironment: %w", err)
 	}

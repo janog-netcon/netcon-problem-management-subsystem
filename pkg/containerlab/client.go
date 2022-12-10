@@ -1,6 +1,7 @@
 package containerlab
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"os"
@@ -79,6 +80,23 @@ func (c *ContainerLabClient) Deploy(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (c *ContainerLabClient) DeployWithOutput(ctx context.Context) ([]byte, []byte, error) {
+	stdoutBuffer, stderrBuffer := bytes.Buffer{}, bytes.Buffer{}
+
+	cmd := exec.CommandContext(ctx,
+		"clab",
+		"--log-level", "debug", "-t", c.topologyFileName, "deploy",
+	)
+
+	cmd.Stdin = nil
+	cmd.Stdout = &stdoutBuffer
+	cmd.Stderr = &stderrBuffer
+	cmd.Dir = c.workingDirectoryPath
+
+	err := cmd.Run()
+	return stdoutBuffer.Bytes(), stderrBuffer.Bytes(), err
 }
 
 func (c *ContainerLabClient) Destroy(ctx context.Context) error {
