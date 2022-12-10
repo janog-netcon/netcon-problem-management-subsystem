@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -51,19 +50,6 @@ func (d *ContainerLabProblemEnvironmentDriver) delete(path string) (bool, error)
 		return false, nil
 	}
 	return true, os.RemoveAll(path)
-}
-
-func (d *ContainerLabProblemEnvironmentDriver) getContainerLabClientFor(
-	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-) *containerlab.ContainerLabClient {
-	manifestPath := path.Join("data", problemEnvironment.Name, "manifest.yml")
-	return containerlab.NewContainerLabClient(manifestPath)
-}
-
-func (d *ContainerLabProblemEnvironmentDriver) getDirectoryPathFor(
-	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-) string {
-	return path.Join("data", problemEnvironment.Name)
 }
 
 func (d *ContainerLabProblemEnvironmentDriver) loadTopologyFile(
