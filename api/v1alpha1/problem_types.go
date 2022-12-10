@@ -55,10 +55,11 @@ type ProblemReplicas struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=prob
-//+kubebuilder:printcolumn:name=TOTAL,type=integer,JSONPath=.status.replicas.total
-//+kubebuilder:printcolumn:name=SCHEDULED,type=integer,JSONPath=.status.replicas.scheduled
+//+kubebuilder:printcolumn:name=DESIRED,type=integer,JSONPath=.spec.assignableReplicas
+//+kubebuilder:printcolumn:name=SCHEDULED,type=integer,JSONPath=.status.replicas.scheduled,priority=1
 //+kubebuilder:printcolumn:name=ASSIGNABLE,type=integer,JSONPath=.status.replicas.assignable
-//+kubebuilder:printcolumn:name=ASSIGNED,type=integer,JSONPath=.status.replicas.assigned
+//+kubebuilder:printcolumn:name=ASSIGNED,type=integer,JSONPath=.status.replicas.assigned,priority=1
+//+kubebuilder:printcolumn:name=TOTAL,type=integer,JSONPath=.status.replicas.total,priority=1
 
 // Problem is the Schema for the problems API
 type Problem struct {

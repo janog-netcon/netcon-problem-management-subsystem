@@ -18,17 +18,23 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.replicas.total
-      name: TOTAL
+    - jsonPath: .spec.assignableReplicas
+      name: DESIRED
       type: integer
     - jsonPath: .status.replicas.scheduled
       name: SCHEDULED
+      priority: 1
       type: integer
     - jsonPath: .status.replicas.assignable
       name: ASSIGNABLE
       type: integer
     - jsonPath: .status.replicas.assigned
       name: ASSIGNED
+      priority: 1
+      type: integer
+    - jsonPath: .status.replicas.total
+      name: TOTAL
+      priority: 1
       type: integer
     name: v1alpha1
     schema:
