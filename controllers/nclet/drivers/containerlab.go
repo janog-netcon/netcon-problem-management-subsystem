@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v2"
 
@@ -180,37 +181,43 @@ func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 		return fmt.Errorf("failed to create or update topology file: %w", err)
 	}
 
+	return d.deploy(ctx, client, clabClient, &problemEnvironment)
+}
+
+func (d *ContainerLabProblemEnvironmentDriver) deploy(
+	ctx context.Context,
+	client client.Client,
+	clabClient *containerlab.ContainerLabClient,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) error {
+	log := log.FromContext(ctx)
+
+	startedAt := time.Now()
 	stdout, stderr, err := clabClient.DeployWithOutput(ctx)
-	if err := d.recordDeployLog(ctx, client, &problemEnvironment, stdout, stderr); err != nil {
+	endedAt := time.Now()
+
+	if err != nil {
+		log.Error(err, "finished deploying", "elapsed", endedAt.Sub(startedAt))
+	} else {
+		log.V(1).Info("finished deploying", "elapsed", endedAt.Sub(startedAt))
+	}
+
+	configMap := corev1.ConfigMap{}
+	configMap.Namespace = problemEnvironment.Namespace
+	configMap.Name = fmt.Sprintf("deploy-%s-%d", problemEnvironment.Name, startedAt.Unix())
+	configMap.Data = map[string]string{
+		"stdout":    string(stdout),
+		"stderr":    string(stderr),
+		"startedAt": startedAt.Format(time.RFC3339Nano),
+		"endedAt":   endedAt.Format(time.RFC3339Nano),
+	}
+	controllerutil.SetOwnerReference(problemEnvironment, &configMap, client.Scheme())
+
+	if err := client.Create(ctx, &configMap); err != nil {
 		log.Info("failed to record deploy log")
 	}
 
 	return err
-}
-
-func (d *ContainerLabProblemEnvironmentDriver) recordDeployLog(
-	ctx context.Context,
-	client client.Client,
-	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-	stdout, stderr []byte,
-) error {
-	configMap := corev1.ConfigMap{}
-	configMap.Namespace = problemEnvironment.Namespace
-	configMap.Name = fmt.Sprintf("deploy-%s", problemEnvironment.Name)
-	configMap.Data = map[string]string{
-		"stdout": string(stdout),
-		"stderr": string(stderr),
-	}
-
-	if err := controllerutil.SetOwnerReference(
-		problemEnvironment,
-		&configMap,
-		client.Scheme(),
-	); err != nil {
-		return err
-	}
-
-	return client.Create(ctx, &configMap)
 }
 
 // Destroy implements ProblemEnvironmentDriver
