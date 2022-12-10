@@ -107,7 +107,7 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 // Check implements ProblemEnvironmentDriver
 func (d *ContainerLabProblemEnvironmentDriver) Check(
 	ctx context.Context,
-	reader client.Reader,
+	reader client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus) {
 	log := log.FromContext(ctx)
@@ -155,7 +155,7 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 // Deploy implements ProblemEnvironmentDriver
 func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 	ctx context.Context,
-	reader client.Reader,
+	reader client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
 	log := log.FromContext(ctx)
@@ -189,7 +189,7 @@ func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 // Destroy implements ProblemEnvironmentDriver
 func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 	ctx context.Context,
-	reader client.Reader,
+	reader client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
 	client := containerlab.NewContainerLabClientFor(&problemEnvironment)
