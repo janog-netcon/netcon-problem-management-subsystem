@@ -7,8 +7,10 @@ import (
 	"time"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	util "github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -110,5 +112,93 @@ var _ = Describe("Problem controller", func() {
 		// finally, update assignableReplicas to 3
 		updateAssignableReplicas(3)
 		checkAssignableReplias(3).Should(Succeed())
+	})
+
+	It("should meet assignableReplicas when ProblemEnvironment is assigned", func() {
+		problem := netconv1alpha1.Problem{}
+		err := loadManifest(filepath.Join("tests", "problems", "problem-tst-002.yaml"), &problem)
+		Expect(err).NotTo(HaveOccurred())
+
+		problemNamespace := problem.Namespace
+		problemName := problem.Name
+
+		err = k8sClient.Create(ctx, &problem)
+		Expect(err).NotTo(HaveOccurred())
+
+		problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
+
+		updateAssignableReplicas := func(assignableReplicas int) {
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Namespace: problemNamespace,
+				Name:      problemName,
+			}, &problem)
+			Expect(err).NotTo(HaveOccurred())
+
+			problem.Spec.AssignableReplicas = assignableReplicas
+			err = k8sClient.Update(ctx, &problem)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		checkReplicas := func(assignableReplicas, desiredAssignedReplicas int) AsyncAssertion {
+			return Eventually(func() error {
+				if err := k8sClient.List(ctx, &problemEnvironments); err != nil {
+					return err
+				}
+
+				assigned, notAssigned := 0, 0
+
+				for _, problemEnvironment := range problemEnvironments.Items {
+					if util.GetProblemEnvironmentCondition(
+						&problemEnvironment,
+						netconv1alpha1.ProblemEnvironmentConditionAssigned,
+					) == metav1.ConditionTrue {
+						assigned += 1
+					} else {
+						notAssigned += 1
+					}
+				}
+
+				if notAssigned != assignableReplicas || assigned != desiredAssignedReplicas {
+					return fmt.Errorf("%d assignable, %d assigned", notAssigned, assigned)
+				}
+
+				return nil
+			})
+		}
+
+		// first, 3 assignableReplicas are expected to exist
+		checkReplicas(3, 0).Should(Succeed())
+
+		// set all assignableReplicas as assigned
+		for _, problemEnvironment := range problemEnvironments.Items {
+			util.SetProblemEnvironmentCondition(
+				&problemEnvironment,
+				netconv1alpha1.ProblemEnvironmentConditionScheduled,
+				metav1.ConditionTrue,
+				"TEST", "---")
+			util.SetProblemEnvironmentCondition(
+				&problemEnvironment,
+				netconv1alpha1.ProblemEnvironmentConditionReady,
+				metav1.ConditionTrue,
+				"TEST", "---")
+			util.SetProblemEnvironmentCondition(
+				&problemEnvironment,
+				netconv1alpha1.ProblemEnvironmentConditionAssigned,
+				metav1.ConditionTrue,
+				"TEST", "---")
+
+			err = k8sClient.Status().Update(ctx, &problemEnvironment)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		// now, all assignableReplicas were assigned
+		// so, 3 assignableReplicas and 3 assignedReplicas are expected to exist
+		checkReplicas(3, 3).Should(Succeed())
+
+		// next, update assignableReplicas to 1
+		// so, 1 assignableReplicas and 3 assignedReplicas are expected to exist
+		// This ensures even if assignedReplicas is decreased, assigned replicas will never deleted
+		updateAssignableReplicas(1)
+		checkReplicas(1, 3).Should(Succeed())
 	})
 })
