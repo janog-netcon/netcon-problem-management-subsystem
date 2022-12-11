@@ -99,6 +99,53 @@ netcon-controller-manager-6b49cb47fb-mn967   2/2     Running   0          9d
 netcon-gateway-fdccf68c5-x9vpb               1/1     Running   0          7m
 ```
 
+## (optional) Setting up LoadBalancer
+
+If you try managers which require external connectivity like Gateway, you need to set up LoadBalancer. First, you need to install MetalLB.
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.7/config/manifests/metallb-native.yaml
+```
+
+Then, you need to configure MetalLB. You can configure MetalLB with helper script.
+
+```bash
+./scripts/generate_metallb_manifest.sh | kubectl apply -f -
+```
+
+Finally, you can create LoadBalancer freely.
+
+```txt
+$ cat service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: netcon
+  name: gateway
+spec:
+  type: LoadBalancer
+  selector:
+    control-plane: gateway
+  ports:
+    - port: 8082
+      targetPort: 8082
+
+$ kubectl apply -f service.yaml
+service/gateway created
+
+$ kubectl -n netcon get svc
+NAME                                        TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)          AGE
+gateway                                     LoadBalancer   10.96.196.144   172.18.0.200   8082:30483/TCP   11s
+netcon-controller-manager-metrics-service   ClusterIP      10.96.233.209   <none>         8443/TCP         17d
+netcon-webhook-service                      ClusterIP      10.96.239.112   <none>         443/TCP          17d
+
+$ curl 172.18.0.200:8082
+Gateway for score server
+```
+
+
+ref: https://kind.sigs.k8s.io/docs/user/loadbalancer/
+
 ## Deploying nclet
 
 After deploying managers successfully, you can install nclet with these command. Note that workers can communicate with Kubernetes controll plane.
