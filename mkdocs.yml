@@ -5,3 +5,4 @@ theme:
     - navigation.tabs
 nav:
   - Development Environment: ./devenv.md
+  - Access Helper: ./access-helper.md

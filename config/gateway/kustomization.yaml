@@ -1,0 +1,11 @@
+resources:
+- deployment.yaml
+- role_binding.yaml
+- role.yaml
+- service_account.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: gateway
+  newName: netcon-pms-gateway
+  newTag: dev

@@ -77,7 +77,7 @@ type ContainerDetailStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=probenv
+//+kubebuilder:resource:shortName={pe,probenv}
 //+kubebuilder:printcolumn:name=SCHEDULED,type=string,JSONPath=.status.conditions[?(@.type=="Scheduled")].status
 //+kubebuilder:printcolumn:name=READY,type=string,JSONPath=.status.conditions[?(@.type=="Ready")].status
 //+kubebuilder:printcolumn:name=ASSIGNED,type=string,JSONPath=.status.conditions[?(@.type=="Assigned")].status
