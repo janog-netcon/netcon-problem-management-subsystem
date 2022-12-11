@@ -62,7 +62,7 @@ curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s ht
 chmod +x kubectl && sudo mv kubectl /usr/local/bin
 ```
 
-## Deploying controller-manager
+## Deploying managers
 
 First, you need to set up a Kubernetes cluster to run controllers.
 
@@ -76,30 +76,32 @@ Next, you need to install cert-manager to generate and inject self-signed certif
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
 ```
 
-Then, you can build and install controller-manager with these commands.
+Then, you can build and install managers with these commands.
 
 ```
-make controller-manager-docker-build nclet-docker-build
-make controller-manager-kind-push
+git submodule update --init
+make controller-manager-docker-build nclet-docker-build gateway-docker-build
+make controller-manager-kind-push gateway-kind-push
 ```
 
-Finally, you can deploy controller-manager with this command.
+Finally, you can deploy managers with this command.
 
 ```bash
 make deploy
 ```
 
-You can check the status of controller-manager with `kubectl -n netcon get pods`.
+You can check the status of managers with `kubectl -n netcon get pods`.
 
 ```bash
 $ kubectl -n netcon get pods 
 NAME                                         READY   STATUS    RESTARTS   AGE
-netcon-controller-manager-66db9dd4fb-kcbb6   2/2     Running   0          14m
+netcon-controller-manager-6b49cb47fb-mn967   2/2     Running   0          9d
+netcon-gateway-fdccf68c5-x9vpb               1/1     Running   0          7m
 ```
 
 ## Deploying nclet
 
-After deploying controller-manager successfully, you can install nclet with these command. Note that workers can communicate with Kubernetes controll plane.
+After deploying managers successfully, you can install nclet with these command. Note that workers can communicate with Kubernetes controll plane.
 
 ```bash
 kind get kubeconfig > kubeconfig

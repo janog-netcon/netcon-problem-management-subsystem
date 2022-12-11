@@ -13,6 +13,7 @@ spec:
     listKind: ProblemEnvironmentList
     plural: problemenvironments
     shortNames:
+    - pe
     - probenv
     singular: problemenvironment
   scope: Namespaced

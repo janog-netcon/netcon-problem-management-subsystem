@@ -54,7 +54,7 @@ type ProblemReplicas struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=prob
+//+kubebuilder:resource:shortName={p,prob}
 //+kubebuilder:printcolumn:name=DESIRED,type=integer,JSONPath=.spec.assignableReplicas
 //+kubebuilder:printcolumn:name=SCHEDULED,type=integer,JSONPath=.status.replicas.scheduled,priority=1
 //+kubebuilder:printcolumn:name=ASSIGNABLE,type=integer,JSONPath=.status.replicas.assignable

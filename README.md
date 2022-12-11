@@ -4,4 +4,4 @@ For more information, please refer to [JANOG51 - Confluence](https://www.janog.g
 
 ## Development environment
 
-Refer to the [`./docs/devenv.md`](./docs/devenv.md).
+Please refer to https://netcon-problem-management-subsystem.pages.dev/devenv/.

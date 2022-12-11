@@ -1,0 +1,58 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: system
+  labels:
+    control-plane: gateway
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/instance: gateway
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/created-by: netcon-problem-management-subsystem
+    app.kubernetes.io/part-of: netcon-problem-management-subsystem
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  selector:
+    matchLabels:
+      control-plane: gateway
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: gateway
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - command:
+        - /gateway
+        args:
+        - --leader-elect
+        image: gateway:latest
+        name: gateway
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        # TODO(user): Configure the resources accordingly based on the project requirements.
+        # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+      serviceAccountName: gateway
+      terminationGracePeriodSeconds: 10
