@@ -18,7 +18,8 @@ COPY pkg/ pkg/
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o nclet ./cmd/nclet
 
-# Build the manager binary
+
+# Build the access-helper binary
 FROM golang:1.19 as access-helper_builder
 
 ARG DEFAULT_USERNAME
@@ -37,16 +38,28 @@ COPY pkg/ pkg/
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 \
     go build -o access-helper -ldflags="-X main.defaultUsername=${DEFAULT_USERNAME} -X main.defaultPassword=${DEFAULT_PASSWORD}" ./cmd/access-helper
 
+
+# Build the containerlab binary
+FROM golang:1.19 as containerlab_builder
+
+WORKDIR /workspace
+COPY containerlab/go.mod go.mod
+COPY containerlab/go.sum go.sum
+RUN go mod download
+
+COPY containerlab/ .
+
+# Build
+RUN --mount=type=cache,target=/root/.cache/go-build make build CGO_ENABLED=0
+
+
 FROM nicolaka/netshoot:v0.7
 WORKDIR /
 
 RUN apk add docker-cli
 
-RUN wget https://github.com/srl-labs/containerlab/releases/download/v0.32.0/containerlab_0.32.0_linux_amd64.apk -O /tmp/containerlab.apk && \
-    apk add --allow-untrusted /tmp/containerlab.apk && \
-    rm -rf /tmp/containerlab.apk
-
 COPY --from=builder /workspace/nclet .
 COPY --from=access-helper_builder /workspace/access-helper /bin
+COPY --from=containerlab_builder /workspace/bin/containerlab /bin/clab
 
 ENTRYPOINT ["/nclet"]

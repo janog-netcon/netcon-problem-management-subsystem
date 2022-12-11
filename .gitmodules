@@ -1,0 +1,3 @@
+[submodule "containerlab"]
+	path = containerlab
+	url = git@github.com:janog-netcon/containerlab.git
