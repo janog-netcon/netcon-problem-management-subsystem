@@ -17,6 +17,9 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT ?= 500s
+export KUBEBUILDER_CONTROLPLANE_STOP_TIMEOUT ?= 500s
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
