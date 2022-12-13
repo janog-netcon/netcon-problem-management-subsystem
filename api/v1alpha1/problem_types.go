@@ -33,15 +33,41 @@ type ProblemEnvironmentTemplate struct {
 	Spec ProblemEnvironmentSpec `json:"spec,omitempty"`
 }
 
+// ProblemStatus defines the observed state of Problem
+type ProblemStatus struct {
+	Replicas ProblemReplicas `json:"replicas"`
+}
+
+type ProblemReplicas struct {
+	// Total is the total number of ProblemEnvironments
+	Total int `json:"total"`
+
+	// Scheduled is the number of ProblemEnvironments which is scheduled but not ready
+	Scheduled int `json:"scheduled"`
+
+	// Assignable is the number of ProblemEnvironments which is ready but not assigned
+	Assignable int `json:"assignable"`
+
+	// Assigned is the number of ProblemEnvironments which is assigned
+	Assigned int `json:"assigned"`
+}
+
 //+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName={p,prob}
+//+kubebuilder:printcolumn:name=DESIRED,type=integer,JSONPath=.spec.assignableReplicas
+//+kubebuilder:printcolumn:name=SCHEDULED,type=integer,JSONPath=.status.replicas.scheduled,priority=1
+//+kubebuilder:printcolumn:name=ASSIGNABLE,type=integer,JSONPath=.status.replicas.assignable
+//+kubebuilder:printcolumn:name=ASSIGNED,type=integer,JSONPath=.status.replicas.assigned,priority=1
+//+kubebuilder:printcolumn:name=TOTAL,type=integer,JSONPath=.status.replicas.total,priority=1
 
 // Problem is the Schema for the problems API
 type Problem struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec ProblemSpec `json:"spec,omitempty"`
+	Spec   ProblemSpec   `json:"spec,omitempty"`
+	Status ProblemStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

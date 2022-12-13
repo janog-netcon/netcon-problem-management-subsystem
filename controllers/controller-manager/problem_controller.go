@@ -44,6 +44,20 @@ type ProblemReconciler struct {
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problems/status,verbs=get;update;patch
 
+func (r *ProblemReconciler) listChildProblemEnvironments(
+	ctx context.Context,
+	problem *netconv1alpha1.Problem,
+) (netconv1alpha1.ProblemEnvironmentList, error) {
+	problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
+
+	return problemEnvironments, r.List(
+		ctx,
+		&problemEnvironments,
+		client.InNamespace(problem.Namespace),
+		client.MatchingLabels{KeyProblemName: problem.Name},
+	)
+}
+
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -58,15 +72,14 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if problem.DeletionTimestamp != nil {
-		return ctrl.Result{}, nil
+	if !problem.DeletionTimestamp.IsZero() {
+		return r.updateStatus(ctx, &problem)
 	}
 
-	problemName := client.MatchingLabels{KeyProblemName: problem.Name}
-	problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
-	if err := r.List(ctx, &problemEnvironments, problemName); err != nil {
-		log.Error(err, "could not list ProblemEnvironments")
-		return ctrl.Result{}, err
+	problemEnvironments, err := r.listChildProblemEnvironments(ctx, &problem)
+	if err != nil {
+		log.Error(err, "failed to list child ProblemEnvironments")
+		return ctrl.Result{}, nil
 	}
 
 	assignableProblemEnvironments := 0
@@ -121,7 +134,43 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return r.updateStatus(ctx, &problem)
+}
+
+func (r *ProblemReconciler) updateStatus(ctx context.Context, problem *netconv1alpha1.Problem) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
+	problemEnvironments, err := r.listChildProblemEnvironments(ctx, problem)
+	if err != nil {
+		log.Error(err, "failed to list child ProblemEnvironments")
+		return ctrl.Result{}, nil
+	}
+
+	scheduled, assignable, assigned := 0, 0, 0
+	for _, pe := range problemEnvironments.Items {
+		isScheduled := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionScheduled)
+		isReady := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionReady)
+		isAssigned := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionAssigned)
+
+		if isScheduled == metav1.ConditionTrue {
+			scheduled++
+		}
+
+		if isReady == metav1.ConditionTrue {
+			if isAssigned != metav1.ConditionTrue {
+				assignable++
+			} else {
+				assigned++
+			}
+		}
+	}
+
+	problem.Status.Replicas.Total = len(problemEnvironments.Items)
+	problem.Status.Replicas.Scheduled = scheduled
+	problem.Status.Replicas.Assignable = assignable
+	problem.Status.Replicas.Assigned = assigned
+
+	return ctrl.Result{}, r.Status().Update(ctx, problem)
 }
 
 // SetupWithManager sets up the controller with the Manager.
