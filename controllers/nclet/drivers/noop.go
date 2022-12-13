@@ -19,7 +19,7 @@ func NewNoopProblemEnvironmentDriver() *NoopProblemEnvironmentDriver {
 // Check implements ProblemEnvironmentDriver
 func (*NoopProblemEnvironmentDriver) Check(
 	ctx context.Context,
-	reader client.Reader,
+	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus) {
 	return StatusReady, nil
@@ -28,7 +28,7 @@ func (*NoopProblemEnvironmentDriver) Check(
 // Deploy implements ProblemEnvironmentDriver
 func (*NoopProblemEnvironmentDriver) Deploy(
 	ctx context.Context,
-	reader client.Reader,
+	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
 	return nil
@@ -37,7 +37,7 @@ func (*NoopProblemEnvironmentDriver) Deploy(
 // Destroy implements ProblemEnvironmentDriver
 func (*NoopProblemEnvironmentDriver) Destroy(
 	ctx context.Context,
-	reader client.Reader,
+	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
 	return nil
