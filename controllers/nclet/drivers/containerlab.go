@@ -111,12 +111,16 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 	topologyConfig.Name = problemEnvironment.Name
 
 	// rewrite filepath forcibly to fill the directory gap
+	// TODO: make base directory configurable
+	prefix := path.Join("/data", problemEnvironment.Name)
 	for _, node := range topologyConfig.Topology.Nodes {
+		// rewrite the path of startupConfig source
+		node.StartupConfig = path.Join(prefix, node.StartupConfig)
+
 		// rewrite the path of bind source
 		for i := range node.Binds {
-			// TODO: make base directory configurable
 			parts := strings.Split(node.Binds[i], ":")
-			parts[0] = path.Join("/data", problemEnvironment.Name, parts[0])
+			parts[0] = path.Join(node.StartupConfig, parts[0])
 			node.Binds[i] = strings.Join(parts, ":")
 		}
 	}
