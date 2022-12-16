@@ -84,9 +84,11 @@ func main() {
 	}
 
 	if err = (&controllers.ProblemEnvironmentReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr, workerName, driver); err != nil {
+		Client:                   mgr.GetClient(),
+		Scheme:                   mgr.GetScheme(),
+		WorkerName:               workerName,
+		ProblemEnvironmentDriver: driver,
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProblemEnvironment")
 		os.Exit(1)
 	}

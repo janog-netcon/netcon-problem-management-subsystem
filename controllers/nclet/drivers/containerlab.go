@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -20,7 +21,8 @@ import (
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
 )
 
-type ContainerLabProblemEnvironmentDriver struct{}
+type ContainerLabProblemEnvironmentDriver struct {
+}
 
 var _ ProblemEnvironmentDriver = &ContainerLabProblemEnvironmentDriver{}
 
@@ -54,33 +56,34 @@ func (d *ContainerLabProblemEnvironmentDriver) delete(path string) (bool, error)
 	return true, os.RemoveAll(path)
 }
 
-func (d *ContainerLabProblemEnvironmentDriver) loadTopologyFile(
+func (d *ContainerLabProblemEnvironmentDriver) fetchFile(
 	ctx context.Context,
 	reader client.Reader,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	fileSource *netconv1alpha1.FileSource,
 ) ([]byte, error) {
 	log := log.FromContext(ctx)
 
 	configMap := corev1.ConfigMap{}
 	if err := reader.Get(ctx, types.NamespacedName{
 		Namespace: problemEnvironment.Namespace,
-		Name:      problemEnvironment.Spec.TopologyFile.ConfigMapRef.Name,
+		Name:      fileSource.ConfigMapRef.Name,
 	}, &configMap); err != nil {
 		log.Error(err, "failed to load topology file")
 		return nil, err
 	}
 
-	topology, ok := configMap.Data[problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key]
+	data, ok := configMap.Data[fileSource.ConfigMapRef.Key]
 	if !ok {
 		err := fmt.Errorf(
 			"ConfigMap found, but key `%s` missing",
-			problemEnvironment.Spec.TopologyFile.ConfigMapRef.Key,
+			fileSource.ConfigMapRef.Key,
 		)
 		log.Error(err, "failed to load topology file")
 		return nil, err
 	}
 
-	return []byte(topology), nil
+	return []byte(data), nil
 }
 
 func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
@@ -90,7 +93,7 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 ) ([]byte, error) {
 	log := log.FromContext(ctx)
 
-	topology, err := d.loadTopologyFile(ctx, reader, problemEnvironment)
+	topology, err := d.fetchFile(ctx, reader, problemEnvironment, &problemEnvironment.Spec.TopologyFile)
 	if err != nil {
 		log.Error(err, "failed to load topology file")
 		return nil, err
@@ -101,9 +104,74 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 		return nil, err
 	}
 
+	// enforce requirements for nclet
+
+	// To avoid name conflict, override Prefix and Name
+	topologyConfig.Prefix = nil
 	topologyConfig.Name = problemEnvironment.Name
 
+	// rewrite filepath forcibly to fill the directory gap
+	for _, node := range topologyConfig.Topology.Nodes {
+		// rewrite the path of bind source
+		for i := range node.Binds {
+			// TODO: make base directory configurable
+			parts := strings.Split(node.Binds[i], ":")
+			parts[0] = path.Join("/data", problemEnvironment.Name, parts[0])
+			node.Binds[i] = strings.Join(parts, ":")
+		}
+	}
+
 	return yaml.Marshal(topologyConfig)
+}
+
+func (d *ContainerLabProblemEnvironmentDriver) placeFiles(
+	ctx context.Context,
+	clabClient *containerlab.ContainerLabClient,
+	reader client.Reader,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) error {
+	log := log.FromContext(ctx)
+
+	// ensure working directory
+	workingDirectoryPath := clabClient.WorkingDirectoryPath()
+	log.V(1).Info("ensuring directory for ProblemEnvironment", "path", workingDirectoryPath)
+	if err := d.ensureDirectory(workingDirectoryPath); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// ensure config directory
+	configDirectoryPath := path.Join(workingDirectoryPath, "config")
+	log.V(1).Info("ensuring directory for ProblemEnvironment", "path", configDirectoryPath)
+	if err := d.ensureDirectory(configDirectoryPath); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// place topology file
+	topologyFile, err := d.getTopologyFileFor(ctx, reader, problemEnvironment)
+	if err != nil {
+		return err
+	}
+
+	topologyFilePath := clabClient.TopologyFilePath()
+	log.V(1).Info("creating topology file", "path", topologyFilePath)
+	if _, err := d.createOrUpdateFile(topologyFilePath, []byte(topologyFile)); err != nil {
+		return fmt.Errorf("failed to create or update topology file: %w", err)
+	}
+
+	// place config file
+	for _, config := range problemEnvironment.Spec.ConfigFiles {
+		data, err := d.fetchFile(ctx, reader, problemEnvironment, &config)
+		if err != nil {
+			return err
+		}
+
+		configFilePath := path.Join(configDirectoryPath, config.ConfigMapRef.Key)
+		if _, err := d.createOrUpdateFile(configFilePath, []byte(data)); err != nil {
+			return fmt.Errorf("failed to create or update topology file: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // Check implements ProblemEnvironmentDriver
@@ -160,25 +228,10 @@ func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
 ) error {
-	log := log.FromContext(ctx)
-
 	clabClient := containerlab.NewContainerLabClientFor(&problemEnvironment)
 
-	topologyFile, err := d.getTopologyFileFor(ctx, client, &problemEnvironment)
-	if err != nil {
+	if err := d.placeFiles(ctx, clabClient, client, &problemEnvironment); err != nil {
 		return err
-	}
-
-	directoryPath := clabClient.WorkingDirectoryPath()
-	log.V(1).Info("ensuring directory for ProblemEnvironment", "path", directoryPath)
-	if err := d.ensureDirectory(directoryPath); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	topologyFilePath := clabClient.TopologyFilePath()
-	log.V(1).Info("creating topology file", "path", topologyFilePath)
-	if _, err := d.createOrUpdateFile(topologyFilePath, []byte(topologyFile)); err != nil {
-		return fmt.Errorf("failed to create or update topology file: %w", err)
 	}
 
 	return d.deploy(ctx, client, clabClient, &problemEnvironment)
