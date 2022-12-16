@@ -67,7 +67,27 @@ spec:
                     description: ProblemEnvironmentSpec defines the desired state
                       of ProblemEnvironment
                     properties:
+                      configFiles:
+                        description: ConfigFiles will be placed under the directory
+                          `config`
+                        items:
+                          properties:
+                            configMapRef:
+                              properties:
+                                key:
+                                  type: string
+                                name:
+                                  type: string
+                              required:
+                              - key
+                              - name
+                              type: object
+                          required:
+                          - configMapRef
+                          type: object
+                        type: array
                       topologyFile:
+                        description: TopologyFile will be placed as `topology.yml`
                         properties:
                           configMapRef:
                             properties:
