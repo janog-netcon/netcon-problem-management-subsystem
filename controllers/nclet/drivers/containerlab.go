@@ -22,12 +22,15 @@ import (
 )
 
 type ContainerLabProblemEnvironmentDriver struct {
+	configDir string
 }
 
 var _ ProblemEnvironmentDriver = &ContainerLabProblemEnvironmentDriver{}
 
-func NewContainerLabProblemEnvironmentDriver() *ContainerLabProblemEnvironmentDriver {
-	return &ContainerLabProblemEnvironmentDriver{}
+func NewContainerLabProblemEnvironmentDriver(configDir string) *ContainerLabProblemEnvironmentDriver {
+	return &ContainerLabProblemEnvironmentDriver{
+		configDir: configDir,
+	}
 }
 
 func (d *ContainerLabProblemEnvironmentDriver) ensureDirectory(path string) error {
@@ -112,7 +115,7 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 
 	// rewrite filepath forcibly to fill the directory gap
 	// TODO: make base directory configurable
-	prefix := path.Join("/data", problemEnvironment.Name)
+	prefix := path.Join(d.configDir, problemEnvironment.Name)
 	for _, node := range topologyConfig.Topology.Nodes {
 		// rewrite the path of startupConfig source
 		node.StartupConfig = path.Join(prefix, node.StartupConfig)
