@@ -23,7 +23,7 @@ metadata:
   namespace: netcon
   name: pro-001
 spec:
-  assignableReplicas: 100
+  assignableReplicas: 3
   template:
     spec:
       topologyFile:
