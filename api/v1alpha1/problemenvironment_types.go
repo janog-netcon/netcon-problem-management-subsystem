@@ -39,7 +39,11 @@ const (
 
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
 type ProblemEnvironmentSpec struct {
+	// TopologyFile will be placed as `topology.yml`
 	TopologyFile FileSource `json:"topologyFile"`
+
+	// ConfigFiles will be placed under the directory `config`
+	ConfigFiles []FileSource `json:"configFiles,omitempty"`
 
 	WorkerName string `json:"workerName,omitempty"`
 }
@@ -79,6 +83,7 @@ type ContainerDetailStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName={pe,probenv}
 //+kubebuilder:printcolumn:name=SCHEDULED,type=string,JSONPath=.status.conditions[?(@.type=="Scheduled")].status
+//+kubebuilder:printcolumn:name=WORKER,type=string,JSONPath=.spec.workerName,priority=1
 //+kubebuilder:printcolumn:name=READY,type=string,JSONPath=.status.conditions[?(@.type=="Ready")].status
 //+kubebuilder:printcolumn:name=ASSIGNED,type=string,JSONPath=.status.conditions[?(@.type=="Assigned")].status
 //+kubebuilder:printcolumn:name=CONTAINERS,type=string,JSONPath=.status.containers.summary,priority=1

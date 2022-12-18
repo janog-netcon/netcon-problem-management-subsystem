@@ -152,15 +152,8 @@ After deploying managers successfully, you can install nclet with these command.
 
 ```bash
 kind get kubeconfig > kubeconfig
-mkdir ./data && chmod 0777 ./data
-docker run -d --name nclet \
-    --privileged --pid=host --net=host --ipc=host \
-    -e KUBECONFIG=/etc/kubernetes/kubeconfig \
-    -v /proc:/proc \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v $(pwd)/kubeconfig:/etc/kubernetes/kubeconfig \
-    -v $(pwd)/data:/data \
-    netcon-pms-nclet:dev
+sudo mkdir /data && sudo chmod 0777 ./data
+./scripts/refresh_nclet.sh
 ```
 
 Now, you can deploy ContainerLab environment with this system. To try it, apply `./config/samples/netcon_v1alpha1_problemenvironment.yaml`.

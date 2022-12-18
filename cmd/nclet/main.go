@@ -41,6 +41,10 @@ import (
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+
+	metricsAddr string
+	probeAddr   string
+	configDir   string
 )
 
 func init() {
@@ -50,10 +54,10 @@ func init() {
 }
 
 func main() {
-	var metricsAddr string
-	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&configDir, "config-directory", "/data", "Path ContainerLab files are placed")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -75,7 +79,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	driver := drivers.NewContainerLabProblemEnvironmentDriver()
+	driver := drivers.NewContainerLabProblemEnvironmentDriver(configDir)
 
 	workerName, err := os.Hostname()
 	if err != nil {
@@ -84,9 +88,11 @@ func main() {
 	}
 
 	if err = (&controllers.ProblemEnvironmentReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr, workerName, driver); err != nil {
+		Client:                   mgr.GetClient(),
+		Scheme:                   mgr.GetScheme(),
+		WorkerName:               workerName,
+		ProblemEnvironmentDriver: driver,
+	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProblemEnvironment")
 		os.Exit(1)
 	}

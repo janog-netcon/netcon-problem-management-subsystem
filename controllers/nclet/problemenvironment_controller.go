@@ -43,9 +43,10 @@ type ProblemEnvironmentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	name string
+	// WorkerName is the name of worker where nclet places
+	WorkerName string
 
-	driver drivers.ProblemEnvironmentDriver
+	ProblemEnvironmentDriver drivers.ProblemEnvironmentDriver
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -70,7 +71,7 @@ func (r *ProblemEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	if problemEnvironment.Spec.WorkerName != r.name {
+	if problemEnvironment.Spec.WorkerName != r.WorkerName {
 		log.V(1).Info("ProblemEnvironment isn't assigned to me")
 		return ctrl.Result{}, nil
 	}
@@ -156,7 +157,7 @@ func (r *ProblemEnvironmentReconciler) cleanup(
 	log := log.FromContext(ctx)
 
 	log.Info("ProblemEnvironment is cleaning up")
-	if err := r.driver.Destroy(ctx, r.Client, *problemEnvironment); err != nil {
+	if err := r.ProblemEnvironmentDriver.Destroy(ctx, r.Client, *problemEnvironment); err != nil {
 		message := "failed to destroy ProblemEnvironment"
 		log.Error(err, message)
 		util.SetProblemEnvironmentCondition(
@@ -210,7 +211,7 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	status, containerDetailStatuses := r.driver.Check(ctx, r.Client, *problemEnvironment)
+	status, containerDetailStatuses := r.ProblemEnvironmentDriver.Check(ctx, r.Client, *problemEnvironment)
 
 	log.V(1).Info("checked the status of ProblemEnvironment", "status", status)
 
@@ -228,8 +229,8 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 		)
 		return r.updateContainerStatus(ctx, problemEnvironment, containerDetailStatuses)
 	case drivers.StatusNotReady:
-		err := r.driver.Deploy(ctx, r.Client, *problemEnvironment)
-		status, containerDetailStatuses := r.driver.Check(ctx, r.Client, *problemEnvironment)
+		err := r.ProblemEnvironmentDriver.Deploy(ctx, r.Client, *problemEnvironment)
+		status, containerDetailStatuses := r.ProblemEnvironmentDriver.Check(ctx, r.Client, *problemEnvironment)
 
 		switch status {
 		case drivers.StatusReady:
@@ -289,10 +290,7 @@ func (r *ProblemEnvironmentReconciler) ensureInstance(
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *ProblemEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager, workerName string, driver drivers.ProblemEnvironmentDriver) error {
-	r.name = workerName
-	r.driver = driver
-
+func (r *ProblemEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&netconv1alpha1.ProblemEnvironment{}).
 		Complete(r)
