@@ -69,6 +69,7 @@ var _ = Describe("Problem controller", func() {
 
 		err = k8sClient.Create(ctx, &problem)
 		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(100 * time.Millisecond)
 
 		updateAssignableReplicas := func(assignableReplicas int) {
 			problem := netconv1alpha1.Problem{}
@@ -100,18 +101,22 @@ var _ = Describe("Problem controller", func() {
 
 		// first, assignableReplicas == 1
 		checkAssignableReplias(1).Should(Succeed())
+		time.Sleep(100 * time.Millisecond)
 
 		// next, update assignableReplicas to 5
 		updateAssignableReplicas(5)
 		checkAssignableReplias(5).Should(Succeed())
+		time.Sleep(100 * time.Millisecond)
 
 		// and then, update assignableReplicas to 0
 		updateAssignableReplicas(0)
 		checkAssignableReplias(0).Should(Succeed())
+		time.Sleep(100 * time.Millisecond)
 
 		// finally, update assignableReplicas to 3
 		updateAssignableReplicas(3)
 		checkAssignableReplias(3).Should(Succeed())
+		time.Sleep(100 * time.Millisecond)
 	})
 
 	It("should meet assignableReplicas when ProblemEnvironment is assigned", func() {
@@ -124,6 +129,7 @@ var _ = Describe("Problem controller", func() {
 
 		err = k8sClient.Create(ctx, &problem)
 		Expect(err).NotTo(HaveOccurred())
+		time.Sleep(100 * time.Millisecond)
 
 		problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
 
@@ -168,6 +174,7 @@ var _ = Describe("Problem controller", func() {
 
 		// first, 3 assignableReplicas are expected to exist
 		checkReplicas(3, 0).Should(Succeed())
+		time.Sleep(100 * time.Millisecond)
 
 		// set all assignableReplicas as assigned
 		for _, problemEnvironment := range problemEnvironments.Items {
@@ -190,15 +197,18 @@ var _ = Describe("Problem controller", func() {
 			err = k8sClient.Status().Update(ctx, &problemEnvironment)
 			Expect(err).NotTo(HaveOccurred())
 		}
+		time.Sleep(100 * time.Millisecond)
 
 		// now, all assignableReplicas were assigned
 		// so, 3 assignableReplicas and 3 assignedReplicas are expected to exist
 		checkReplicas(3, 3).Should(Succeed())
+		time.Sleep(100 * time.Millisecond)
 
 		// next, update assignableReplicas to 1
 		// so, 1 assignableReplicas and 3 assignedReplicas are expected to exist
 		// This ensures even if assignedReplicas is decreased, assigned replicas will never deleted
 		updateAssignableReplicas(1)
 		checkReplicas(1, 3).Should(Succeed())
+		time.Sleep(100 * time.Millisecond)
 	})
 })
