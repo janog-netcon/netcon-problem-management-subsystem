@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,12 +42,34 @@ func (g *Gateway) InjectClient(client client.Client) error {
 func (g *Gateway) GetProblem(ctx context.Context) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		log := log.FromContext(ctx)
-		problemName := client.MatchingLabels{"problemName": c.Param("name")}
+		// e.g., pro-001-v8k24
+		problemEnvironmentName := c.Param("name")
+
+		problemEnvironmentNameParts := strings.Split(problemEnvironmentName, "-")
+		// e.g., pro-001
+		problemName := ""
+		for i, v := range problemEnvironmentNameParts {
+			problemName += v
+			if i >= len(problemEnvironmentNameParts)-2 {
+				break
+			}
+			problemName += "-"
+		}
+		problemNameLabel := client.MatchingLabels{"problemName": problemName}
 		problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
-		if err := g.Client.List(ctx, &problemEnvironments, problemName); err != nil {
+		if err := g.Client.List(ctx, &problemEnvironments, problemNameLabel); err != nil {
 			log.Error(err, "could not list ProblemEnvironments")
 			return err
 		}
+
+		selectedItems := []netconv1alpha1.ProblemEnvironment{}
+		for _, pe := range problemEnvironments.Items {
+			log.Info(pe.Name)
+			if pe.Name == problemEnvironmentName {
+				selectedItems = append(selectedItems, pe)
+			}
+		}
+		problemEnvironments.Items = selectedItems
 
 		problemResponse := ProblemResponse{}
 		problemResponse.Response = problemEnvironments
