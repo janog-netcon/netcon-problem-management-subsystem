@@ -27,6 +27,9 @@ type HeartbeatAgent struct {
 	// workerName is the name of Worker that nclet runs on
 	workerName string
 
+	// workerName is the name of Worker that nclet runs on
+	externalIPAddr string
+
 	heartbeatTicker    *time.Ticker
 	statusUpdateTicker *time.Ticker
 
@@ -34,9 +37,10 @@ type HeartbeatAgent struct {
 	memUsedHistory [20]float64
 }
 
-func NewHeartbeatAgent(workerName string, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
+func NewHeartbeatAgent(workerName string, externalIPaddr string, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
 	return &HeartbeatAgent{
 		workerName:         workerName,
+		externalIPAddr:     externalIPaddr,
 		heartbeatTicker:    time.NewTicker(heartbeatInterval),
 		statusUpdateTicker: time.NewTicker(statusUpdateInterval),
 	}
@@ -119,14 +123,11 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 				continue
 			}
 
-			// TODO: resolve external IP address used by users to access
-			externalIPAddress := "..."
-
 			cpuUsed, memUsed := a.getMetrics()
 
 			worker.Status.WorkerInfo = netconv1alpha1.WorkerInfo{
 				Hostname:          hostname,
-				ExternalIPAddress: externalIPAddress,
+				ExternalIPAddress: a.externalIPAddr,
 				CPUUsedPercent:    strconv.FormatFloat(cpuUsed, 'f', -1, 64),
 				MemoryUsedPercent: strconv.FormatFloat(memUsed, 'f', -1, 64),
 			}

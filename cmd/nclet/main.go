@@ -44,7 +44,9 @@ var (
 
 	metricsAddr string
 	probeAddr   string
-	configDir   string
+
+	externalIPAddr string
+	configDir      string
 )
 
 func init() {
@@ -56,6 +58,8 @@ func init() {
 func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+
+	flag.StringVar(&externalIPAddr, "external-ip-address", "127.0.0.1", "The IP address user connect to.")
 	flag.StringVar(&configDir, "config-directory", "/data", "Path ContainerLab files are placed")
 
 	opts := zap.Options{
@@ -107,6 +111,7 @@ func main() {
 
 	if err = mgr.Add(controllers.NewHeartbeatAgent(
 		workerName,
+		externalIPAddr,
 		heartbeatInterval,
 		statusUpdateInterval,
 	)); err != nil {
