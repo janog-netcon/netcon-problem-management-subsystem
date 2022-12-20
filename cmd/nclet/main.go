@@ -44,9 +44,13 @@ var (
 
 	metricsAddr string
 	probeAddr   string
+	sshAddr     string
 
 	externalIPAddr string
 	configDir      string
+
+	heartbeatInterval    string
+	statusUpdateInterval string
 )
 
 func init() {
@@ -58,9 +62,13 @@ func init() {
 func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&sshAddr, "ssh-bind-address", ":2222", "The address SSH server binds to.")
 
 	flag.StringVar(&externalIPAddr, "external-ip-address", "127.0.0.1", "The IP address user connect to.")
 	flag.StringVar(&configDir, "config-directory", "/data", "Path ContainerLab files are placed")
+
+	flag.StringVar(&heartbeatInterval, "heartbeat-interval", "3s", "Heartbeat interval")
+	flag.StringVar(&statusUpdateInterval, "status-update-interval", "10s", "Status update interval")
 
 	opts := zap.Options{
 		Development: true,
@@ -91,6 +99,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	heartbeatInterval, err := time.ParseDuration(heartbeatInterval)
+	if err != nil {
+		setupLog.Error(err, "failed to parse heartbeat interval")
+	}
+
+	statusUpdateInterval, err := time.ParseDuration(statusUpdateInterval)
+	if err != nil {
+		setupLog.Error(err, "failed to status update interval")
+	}
+
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client:                   mgr.GetClient(),
 		Scheme:                   mgr.GetScheme(),
@@ -101,13 +119,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(&controllers.SSHServer{}); err != nil {
+	if err = mgr.Add(controllers.NewSSHServer(sshAddr)); err != nil {
 		setupLog.Error(err, "unable to create ssh server")
 		os.Exit(1)
 	}
-
-	heartbeatInterval := 3 * time.Second
-	statusUpdateInterval := 10 * time.Second
 
 	if err = mgr.Add(controllers.NewHeartbeatAgent(
 		workerName,

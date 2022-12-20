@@ -73,6 +73,15 @@ func parseUser(user string) (*User, error) {
 
 type SSHServer struct {
 	client.Client
+
+	sshAddr string
+}
+
+func NewSSHServer(sshAddr string) *SSHServer {
+	return &SSHServer{
+		sshAddr: sshAddr,
+	}
+
 }
 
 var _ manager.Runnable = &SSHServer{}
@@ -215,7 +224,7 @@ func (r *SSHServer) Start(ctx context.Context) error {
 	_ = log.FromContext(ctx)
 
 	server := &ssh.Server{
-		Addr: ":2222",
+		Addr: r.sshAddr,
 		PasswordHandler: func(sctx ssh.Context, password string) bool {
 			// TODO: Add logging
 			return r.handlePasswordAuthentication(ctx, sctx, password)
