@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -18,6 +19,44 @@ const (
 	AccessMethodKey = "netcon.janog.gr.jp/accessMethod"
 	AdminOnlyKey    = "netcon.janog.gr.jp/adminOnly"
 )
+
+func askUserForNode(config *containerlab.Config, isAdmin bool) string {
+	nodeNames := []string{}
+	for nodeName, nodeDefinition := range config.Topology.Nodes {
+		if nodeDefinition.Labels[AdminOnlyKey] == "true" && !isAdmin {
+			continue
+		}
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	sort.Strings(nodeNames)
+
+	fmt.Println("Nodes:")
+	for i := 0; i < len(nodeNames); i++ {
+		fmt.Printf("   %3d: %s\n", i+1, nodeNames[i])
+	}
+	fmt.Println("   999: (exit)")
+
+	for {
+		var selected int
+		fmt.Print("Your select: ")
+		if _, err := fmt.Scan(&selected); err != nil {
+			fmt.Println("Please input collect value.")
+			continue
+		}
+
+		if selected == 999 {
+			return ""
+		}
+
+		if !(1 <= selected && selected <= len(nodeNames)) {
+			fmt.Println("Please input collect value.")
+			continue
+		}
+
+		return nodeNames[selected-1]
+	}
+}
 
 func accessNode(
 	ctx context.Context,
@@ -87,14 +126,13 @@ func main() {
 	cmd := cobra.Command{
 		Use: path.Base(os.Args[0]),
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
+			if len(args) > 1 {
 				return errors.New("invalid argument")
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-			nodeName := args[0]
 
 			// access-helper requires stdin bound to terminal
 			if !term.IsTerminal(0) {
@@ -114,7 +152,15 @@ func main() {
 				return nil
 			}
 
-			return accessNode(ctx, client, config, nodeName, isAdmin)
+			if len(args) == 1 { // if nodeName is specified
+				return accessNode(ctx, client, config, args[0], isAdmin)
+			} else {
+				nodeName := askUserForNode(config, isAdmin)
+				if nodeName == "" {
+					return nil
+				}
+				return accessNode(ctx, client, config, nodeName, isAdmin)
+			}
 		},
 	}
 
