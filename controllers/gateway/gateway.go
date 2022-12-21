@@ -5,10 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strings"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -69,22 +68,19 @@ func (g *Gateway) GetProblemEnvironmentHandlerFunc(ctx context.Context) echo.Han
 	return func(c echo.Context) error {
 		problemEnvironmentName := c.Param("name")
 
-		problemEnvironments, err := g.GetProblemEnvironmentList(ctx, problemEnvironmentName)
+		problemEnvironment, err := g.GetProblemEnvironment(ctx, problemEnvironmentName)
 		if err != nil {
 			c.Echo().Logger.Errorf("failed to get problem environment list", err)
 			return err
 		}
 
-		selectedItems := []netconv1alpha1.ProblemEnvironment{}
-		for _, pe := range problemEnvironments.Items {
-			if pe.Name == problemEnvironmentName {
-				selectedItems = append(selectedItems, pe)
-			}
-		}
-		problemEnvironments.Items = selectedItems
+		problemEnvironmentList := netconv1alpha1.ProblemEnvironmentList{}
+		problemEnvironments := []netconv1alpha1.ProblemEnvironment{}
+		problemEnvironments = append(problemEnvironments, problemEnvironment)
+		problemEnvironmentList.Items = problemEnvironments
 
 		problemEnvironmentResponse := ProblemEnvironmentResponse{}
-		problemEnvironmentResponse.Response = problemEnvironments
+		problemEnvironmentResponse.Response = problemEnvironmentList
 
 		var b bytes.Buffer
 		encoder := json.NewEncoder(&b)
@@ -155,43 +151,27 @@ func (g *Gateway) DeleteProblemEnvironmentHandlerFunc(ctx context.Context) echo.
 	return func(c echo.Context) error {
 		problemEnvironmentName := c.Param("name")
 
-		problemEnvironments, err := g.GetProblemEnvironmentList(ctx, problemEnvironmentName)
+		problemEnvironment, err := g.GetProblemEnvironment(ctx, problemEnvironmentName)
 		if err != nil {
 			c.Echo().Logger.Errorf("failed to get problem environment list", err)
 			return err
 		}
 
-		for _, pe := range problemEnvironments.Items {
-			// assignedCondition := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionAssigned)
-			if pe.Name == problemEnvironmentName {
-				if err := g.Client.Delete(ctx, &pe); err != nil {
-					c.Echo().Logger.Errorf("failed to delete", err)
-					return err
-				}
-				break
-			}
+		if err := g.Client.Delete(ctx, &problemEnvironment); err != nil {
+			c.Echo().Logger.Errorf("failed to delete", err)
+			return err
 		}
 
 		return c.JSONBlob(http.StatusOK, nil)
 	}
 }
 
-func (g *Gateway) GetProblemEnvironmentList(ctx context.Context, problemEnvironmentName string) (netconv1alpha1.ProblemEnvironmentList, error) {
+func (g *Gateway) GetProblemEnvironment(ctx context.Context, problemEnvironmentName string) (netconv1alpha1.ProblemEnvironment, error) {
 	log := log.FromContext(ctx)
-	problemEnvironmentNameParts := strings.Split(problemEnvironmentName, "-")
-	problemName := ""
-	for i, v := range problemEnvironmentNameParts {
-		problemName += v
-		if i >= len(problemEnvironmentNameParts)-2 {
-			break
-		}
-		problemName += "-"
-	}
-	problemNameLabel := client.MatchingLabels{"problemName": problemName}
-	problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
-	if err := g.Client.Get(ctx, types.NamespacedName{Namespace: "netcon", Name: problemEnvironmentName}, &problemEnvironment{}); err != nil {
+	problemEnvironment := netconv1alpha1.ProblemEnvironment{}
+	if err := g.Client.Get(ctx, types.NamespacedName{Namespace: "netcon", Name: problemEnvironmentName}, &problemEnvironment); err != nil {
 		log.Error(err, "could not get ProblemEnvironments")
-		return problemEnvironments, err
+		return problemEnvironment, err
 	}
-	return problemEnvironments, nil
+	return problemEnvironment, nil
 }
