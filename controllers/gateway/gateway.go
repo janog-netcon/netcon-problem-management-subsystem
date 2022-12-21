@@ -189,8 +189,8 @@ func (g *Gateway) GetProblemEnvironmentList(ctx context.Context, problemEnvironm
 	}
 	problemNameLabel := client.MatchingLabels{"problemName": problemName}
 	problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
-	if err := g.Client.List(ctx, &problemEnvironments, problemNameLabel); err != nil {
-		log.Error(err, "could not list ProblemEnvironments")
+	if err := g.Client.Get(ctx, types.NamespacedName{Namespace: "netcon", Name: problemEnvironmentName}, &problemEnvironment{}); err != nil {
+		log.Error(err, "could not get ProblemEnvironments")
 		return problemEnvironments, err
 	}
 	return problemEnvironments, nil
