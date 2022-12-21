@@ -21,10 +21,6 @@ import (
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
 
-const (
-	vmdb_api_base_url = "http://vmdb-api:8080" // TODO: vmdb-apiに合わせて変える
-)
-
 type Gateway struct {
 	client.Client
 }
@@ -56,16 +52,14 @@ func (g *Gateway) Start(ctx context.Context) error {
 	e.Use(middleware.Recover())
 
 	e.GET("/", hello)
-	e.GET("/problem/:name", g.GetProblem(ctx))
-	e.POST("/problem", g.PostProblem(ctx))
-	e.DELETE("/problem/:name", g.DeleteProblem(ctx))
+	e.GET("/problem/:name", g.GetProblemEnvironmentHandlerFunc(ctx))
+	e.POST("/problem", g.PostProblemEnvironmentHandlerFunc(ctx))
+	e.DELETE("/problem/:name", g.DeleteProblemEnvironmentHandlerFunc(ctx))
 
 	e.Logger.Fatal(e.Start(":8082"))
 
 	return nil
 }
-
-var httpClient = &http.Client{Timeout: 10 * time.Second}
 
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Gateway for score server")
@@ -101,7 +95,7 @@ func (g *Gateway) GetProblemEnvironmentHandlerFunc(ctx context.Context) echo.Han
 	}
 }
 
-func (g *Gateway) PostProblem(ctx context.Context) echo.HandlerFunc {
+func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		log := log.FromContext(ctx)
 		postProblemEnvironmentRequest := PostProblemEnvironmentRequest{}
@@ -157,7 +151,7 @@ func (g *Gateway) PostProblem(ctx context.Context) echo.HandlerFunc {
 	}
 }
 
-func (g *Gateway) DeleteProblem(ctx context.Context) echo.HandlerFunc {
+func (g *Gateway) DeleteProblemEnvironmentHandlerFunc(ctx context.Context) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		problemEnvironmentName := c.Param("name")
 
