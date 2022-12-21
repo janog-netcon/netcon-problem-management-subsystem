@@ -71,7 +71,7 @@ func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Gateway for score server")
 }
 
-func (g *Gateway) GetProblem(ctx context.Context) echo.HandlerFunc {
+func (g *Gateway) GetProblemEnvironmentHandlerFunc(ctx context.Context) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		problemEnvironmentName := c.Param("name")
 
