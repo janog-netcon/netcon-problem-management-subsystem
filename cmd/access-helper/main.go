@@ -35,7 +35,7 @@ func askUserForNode(config *containerlab.Config, isAdmin bool) string {
 	for i := 0; i < len(nodeNames); i++ {
 		fmt.Printf("   %3d: %s\n", i+1, nodeNames[i])
 	}
-	fmt.Println("   999: (exit)")
+	fmt.Println("   0: (exit)")
 
 	for {
 		var selected int
@@ -45,7 +45,7 @@ func askUserForNode(config *containerlab.Config, isAdmin bool) string {
 			continue
 		}
 
-		if selected == 999 {
+		if selected == 0 {
 			return ""
 		}
 
