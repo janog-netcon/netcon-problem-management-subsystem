@@ -66,11 +66,12 @@ func hello(c echo.Context) error {
 
 func (g *Gateway) GetProblemEnvironmentHandlerFunc(ctx context.Context) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		log := log.FromContext(ctx)
 		problemEnvironmentName := c.Param("name")
 
 		problemEnvironment, err := g.GetProblemEnvironment(ctx, problemEnvironmentName)
 		if err != nil {
-			c.Echo().Logger.Errorf("failed to get problem environment list", err)
+			log.Error(err, "failed to get problem environment list")
 			return err
 		}
 
@@ -106,7 +107,6 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 		problemNameLabel := client.MatchingLabels{"problemName": problemName}
 		problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
 		if err := g.Client.List(ctx, &problemEnvironments, problemNameLabel); err != nil {
-			c.Echo().Logger.Errorf("could not list ProblemEnvironments", err)
 			log.Error(err, "could not list ProblemEnvironments")
 			return err
 		}
@@ -130,7 +130,8 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 			}
 		}
 		if len(selectedItems) == 0 {
-			return c.JSONBlob(http.StatusBadRequest, nil)
+			log.Error(err, "no such applicable problem environment")
+			return c.JSONBlob(http.StatusInternalServerError, nil)
 		}
 
 		problemEnvironments.Items = selectedItems
@@ -149,16 +150,17 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 
 func (g *Gateway) DeleteProblemEnvironmentHandlerFunc(ctx context.Context) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		log := log.FromContext(ctx)
 		problemEnvironmentName := c.Param("name")
 
 		problemEnvironment, err := g.GetProblemEnvironment(ctx, problemEnvironmentName)
 		if err != nil {
-			c.Echo().Logger.Errorf("failed to get problem environment list", err)
+			log.Error(err, "failed to get problem environment list")
 			return err
 		}
 
 		if err := g.Client.Delete(ctx, &problemEnvironment); err != nil {
-			c.Echo().Logger.Errorf("failed to delete", err)
+			log.Error(err, "failed to deletet")
 			return err
 		}
 
