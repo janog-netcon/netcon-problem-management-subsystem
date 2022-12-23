@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -20,19 +21,31 @@ import (
 	mem "github.com/shirou/gopsutil/v3/mem"
 )
 
+const (
+	CPU_USED_HISTORY_SIZE = 20
+	MEM_USED_HISTORY_SIZE = 20
+)
+
 type HeartbeatAgent struct {
 	client.Client
 
 	// workerName is the name of Worker that nclet runs on
 	workerName string
 
+	// workerName is the name of Worker that nclet runs on
+	externalIPAddr string
+
 	heartbeatTicker    *time.Ticker
 	statusUpdateTicker *time.Ticker
+
+	cpuUsedHistory [CPU_USED_HISTORY_SIZE]float64
+	memUsedHistory [MEM_USED_HISTORY_SIZE]float64
 }
 
-func NewHeartbeatAgent(workerName string, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
+func NewHeartbeatAgent(workerName string, externalIPaddr string, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
 	return &HeartbeatAgent{
 		workerName:         workerName,
+		externalIPAddr:     externalIPaddr,
 		heartbeatTicker:    time.NewTicker(heartbeatInterval),
 		statusUpdateTicker: time.NewTicker(statusUpdateInterval),
 	}
@@ -61,6 +74,12 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 
 	log := log.FromContext(ctx)
 
+	if err := a.initMetricsCollector(ctx); err != nil {
+		return fmt.Errorf("failed to collect metrics: %w", err)
+	}
+
+	metricsCollectTicker := time.NewTicker(1 * time.Second)
+
 	target := types.NamespacedName{
 		// TODO: fix hardcode
 		Namespace: "netcon",
@@ -85,6 +104,11 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 
 	for {
 		select {
+		case <-metricsCollectTicker.C:
+			log.V(1).Info("metrics collector ticker is fired, collect metrics")
+			if err := a.collectMetrics(ctx); err != nil {
+				return fmt.Errorf("failed to collect metrics: %w", err)
+			}
 		case <-a.heartbeatTicker.C:
 			log.V(1).Info("heartbeat ticker is fired, create Lease for heartbeat")
 			// TODO: implement the mechanism to update Lease for this Worker
@@ -104,26 +128,13 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 				continue
 			}
 
-			// TODO: resolve external IP address used by users to access
-			externalIPAddress := "..."
-
-			virtualMemory, err := mem.VirtualMemory()
-			if err != nil {
-				log.Error(err, "failed to get memoryUsedPercent")
-				continue
-			}
-
-			cpuUsedPercents, err := cpu.Percent(time.Minute, false)
-			if err != nil {
-				log.Error(err, "failed to get CPUUsedPercent")
-				continue
-			}
+			cpuUsed, memUsed := a.getMetrics()
 
 			worker.Status.WorkerInfo = netconv1alpha1.WorkerInfo{
 				Hostname:          hostname,
-				ExternalIPAddress: externalIPAddress,
-				MemoryUsedPercent: strconv.FormatFloat(virtualMemory.UsedPercent, 'f', -1, 64),
-				CPUUsedPercent:    strconv.FormatFloat(cpuUsedPercents[0], 'f', -1, 64),
+				ExternalIPAddress: a.externalIPAddr,
+				CPUUsedPercent:    strconv.FormatFloat(cpuUsed, 'f', -1, 64),
+				MemoryUsedPercent: strconv.FormatFloat(memUsed, 'f', -1, 64),
 			}
 
 			if err := a.Status().Update(ctx, &worker); err != nil {
@@ -134,4 +145,71 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+func (a *HeartbeatAgent) initMetricsCollector(ctx context.Context) error {
+	if _, err := cpu.PercentWithContext(ctx, 0, false); err != nil {
+		return fmt.Errorf("failed to collect metrics: %w", err)
+	}
+
+	for i := range a.cpuUsedHistory {
+		a.cpuUsedHistory[i] = 0
+	}
+
+	for i := range a.memUsedHistory {
+		a.memUsedHistory[i] = 0
+	}
+
+	return nil
+}
+
+func (a *HeartbeatAgent) collectMetrics(ctx context.Context) error {
+	log := log.FromContext(ctx)
+
+	cpuUsed, err := cpu.PercentWithContext(ctx, 0, false)
+	if err != nil {
+		return err
+	}
+
+	memInfo, err := mem.VirtualMemoryWithContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < CPU_USED_HISTORY_SIZE-1; i++ {
+		a.cpuUsedHistory[i+1] = a.cpuUsedHistory[i]
+	}
+
+	for i := 0; i < MEM_USED_HISTORY_SIZE-1; i++ {
+		a.memUsedHistory[i+1] = a.memUsedHistory[i]
+	}
+
+	a.cpuUsedHistory[0] = cpuUsed[0]
+	a.memUsedHistory[0] = memInfo.UsedPercent
+
+	log.V(1).Info("collected metrics", "cpuUsed", cpuUsed[0], "memUsed", memInfo.UsedPercent)
+
+	return nil
+}
+
+func (a *HeartbeatAgent) getMetrics() (float64, float64) {
+	var cpuUsed, memUsed float64
+
+	// most old metrics != 0 => we can collect enough metrics
+	if a.cpuUsedHistory[MEM_USED_HISTORY_SIZE-1] != 0 {
+		for i := 0; i < MEM_USED_HISTORY_SIZE; i++ {
+			cpuUsed += a.cpuUsedHistory[i]
+		}
+		cpuUsed /= MEM_USED_HISTORY_SIZE
+	}
+
+	// most old metrics != 0 => we can collect enough metrics
+	if a.memUsedHistory[MEM_USED_HISTORY_SIZE-1] != 0 {
+		for i := 0; i < MEM_USED_HISTORY_SIZE; i++ {
+			memUsed += a.memUsedHistory[i]
+		}
+		memUsed /= MEM_USED_HISTORY_SIZE
+	}
+
+	return cpuUsed, memUsed
 }
