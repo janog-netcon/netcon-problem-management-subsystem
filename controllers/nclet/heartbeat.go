@@ -21,6 +21,11 @@ import (
 	mem "github.com/shirou/gopsutil/v3/mem"
 )
 
+const (
+	CPU_USED_HISTORY_SIZE = 20
+	MEM_USED_HISTORY_SIZE = 20
+)
+
 type HeartbeatAgent struct {
 	client.Client
 
@@ -33,8 +38,8 @@ type HeartbeatAgent struct {
 	heartbeatTicker    *time.Ticker
 	statusUpdateTicker *time.Ticker
 
-	cpuUsedHistory [20]float64
-	memUsedHistory [20]float64
+	cpuUsedHistory [CPU_USED_HISTORY_SIZE]float64
+	memUsedHistory [MEM_USED_HISTORY_SIZE]float64
 }
 
 func NewHeartbeatAgent(workerName string, externalIPaddr string, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
@@ -171,11 +176,11 @@ func (a *HeartbeatAgent) collectMetrics(ctx context.Context) error {
 		return err
 	}
 
-	for i := 0; i < len(a.cpuUsedHistory)-1; i++ {
+	for i := 0; i < CPU_USED_HISTORY_SIZE-1; i++ {
 		a.cpuUsedHistory[i+1] = a.cpuUsedHistory[i]
 	}
 
-	for i := 0; i < len(a.memUsedHistory)-1; i++ {
+	for i := 0; i < MEM_USED_HISTORY_SIZE-1; i++ {
 		a.memUsedHistory[i+1] = a.memUsedHistory[i]
 	}
 
@@ -188,22 +193,22 @@ func (a *HeartbeatAgent) collectMetrics(ctx context.Context) error {
 }
 
 func (a *HeartbeatAgent) getMetrics() (float64, float64) {
-	cpuUsed, memUsed := 0.0, 0.0
+	var cpuUsed, memUsed float64
 
 	// most old metrics != 0 => we can collect enough metrics
-	if a.cpuUsedHistory[len(a.cpuUsedHistory)-1] != 0 {
-		for i := 0; i < len(a.cpuUsedHistory); i++ {
+	if a.cpuUsedHistory[MEM_USED_HISTORY_SIZE-1] != 0 {
+		for i := 0; i < MEM_USED_HISTORY_SIZE; i++ {
 			cpuUsed += a.cpuUsedHistory[i]
 		}
-		cpuUsed /= float64(len(a.cpuUsedHistory))
+		cpuUsed /= MEM_USED_HISTORY_SIZE
 	}
 
 	// most old metrics != 0 => we can collect enough metrics
-	if a.memUsedHistory[len(a.memUsedHistory)-1] != 0 {
-		for i := 0; i < len(a.memUsedHistory); i++ {
+	if a.memUsedHistory[MEM_USED_HISTORY_SIZE-1] != 0 {
+		for i := 0; i < MEM_USED_HISTORY_SIZE; i++ {
 			memUsed += a.memUsedHistory[i]
 		}
-		memUsed /= float64(len(a.cpuUsedHistory))
+		memUsed /= MEM_USED_HISTORY_SIZE
 	}
 
 	return cpuUsed, memUsed
