@@ -155,13 +155,13 @@ func main() {
 			}
 
 			if len(args) == 1 { // if nodeName is specified
-				return accessNode(ctx, client, config, args[0], isAdmin)
+				accessNode(ctx, client, config, args[0], isAdmin)
 			} else {
 				nodeName := askUserForNode(config, isAdmin)
 				if nodeName == "" {
 					return nil
 				}
-				return accessNode(ctx, client, config, nodeName, isAdmin)
+				accessNode(ctx, client, config, nodeName, isAdmin)
 			}
 		},
 	}
