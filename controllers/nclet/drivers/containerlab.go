@@ -118,7 +118,9 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 	prefix := path.Join(d.configDir, problemEnvironment.Name)
 	for _, node := range topologyConfig.Topology.Nodes {
 		// rewrite the path of startupConfig source
-		node.StartupConfig = path.Join(prefix, node.StartupConfig)
+		if node.StartupConfig != "" {
+			node.StartupConfig = path.Join(prefix, node.StartupConfig)
+		}
 
 		// rewrite the path of bind source
 		for i := range node.Binds {
