@@ -163,6 +163,8 @@ func main() {
 				}
 				accessNode(ctx, client, config, nodeName, isAdmin)
 			}
+			
+			return nil
 		},
 	}
 
