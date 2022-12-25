@@ -8,6 +8,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -126,6 +127,7 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 					"AssignedProblemEnvironemnt",
 					message,
 				)
+				g.updateStatus(ctx, &pe, ctrl.Result{})
 				break
 			}
 		}
@@ -166,6 +168,19 @@ func (g *Gateway) DeleteProblemEnvironmentHandlerFunc(ctx context.Context) echo.
 
 		return c.JSONBlob(http.StatusOK, nil)
 	}
+}
+
+func (g *Gateway) updateStatus(
+	ctx context.Context,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	res ctrl.Result,
+) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+	if err := g.Status().Update(ctx, problemEnvironment); err != nil {
+		log.Error(err, "failed to update status")
+		return ctrl.Result{}, err
+	}
+	return res, nil
 }
 
 func (g *Gateway) GetProblemEnvironment(ctx context.Context, problemEnvironmentName string) (netconv1alpha1.ProblemEnvironment, error) {
