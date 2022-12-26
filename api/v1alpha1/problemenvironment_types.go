@@ -40,16 +40,16 @@ const (
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
 type ProblemEnvironmentSpec struct {
 	// TopologyFile will be placed as `topology.yml`
-	TopologyFile FileSource `json:"topologyFile"`
+	TopologyFile FileSource `json:"topologyFile" yaml:"topologyFile"`
 
 	// ConfigFiles will be placed under the directory `config`
-	ConfigFiles []FileSource `json:"configFiles,omitempty"`
+	ConfigFiles []FileSource `json:"configFiles,omitempty" yaml:"configFiles,omitempty"`
 
-	WorkerName string `json:"workerName,omitempty"`
+	WorkerName string `json:"workerName,omitempty" yaml:"workername,omitempty"`
 }
 
 type FileSource struct {
-	ConfigMapRef ConfigMapFileSource `json:"configMapRef"`
+	ConfigMapRef ConfigMapFileSource `json:"configMapRef" yaml:"configMapRef"`
 }
 
 type ConfigMapFileSource struct {
@@ -59,24 +59,24 @@ type ConfigMapFileSource struct {
 
 // ProblemEnvironmentStatus defines the observed state of ProblemEnvironment
 type ProblemEnvironmentStatus struct {
-	Containers *ContainersStatus `json:"containers,omitempty"`
+	Containers *ContainersStatus `json:"containers,omitempty" yaml:"containers,omitempty"`
 
-	Password string `json:"password,omitempty"`
+	Password string `json:"password,omitempty" yaml:"password,omitempty"`
 
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" yaml:"conditions,omitempty"`
 }
 
 type ContainersStatus struct {
-	Summary string                  `json:"summary"`
-	Details []ContainerDetailStatus `json:"details"`
+	Summary string                  `json:"summary" yaml:"summary"`
+	Details []ContainerDetailStatus `json:"details" yaml:"details"`
 }
 
 type ContainerDetailStatus struct {
-	Name                string `json:"name"`
-	Image               string `json:"image"`
-	ContainerID         string `json:"containerID"`
-	Ready               bool   `json:"ready"`
-	ManagementIPAddress string `json:"managementIPAddress"`
+	Name                string `json:"name" yaml:"name"`
+	Image               string `json:"image" yaml:"image"`
+	ContainerID         string `json:"containerID" yaml:"containerID"`
+	Ready               bool   `json:"ready" yaml:"ready"`
+	ManagementIPAddress string `json:"managementIPAddress" yaml:"managementIPAddress"`
 }
 
 //+kubebuilder:object:root=true
@@ -91,20 +91,20 @@ type ContainerDetailStatus struct {
 
 // ProblemEnvironment is the Schema for the problemenvironments API
 type ProblemEnvironment struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta   `json:",inline" yaml:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 
-	Spec   ProblemEnvironmentSpec   `json:"spec,omitempty"`
-	Status ProblemEnvironmentStatus `json:"status,omitempty"`
+	Spec   ProblemEnvironmentSpec   `json:"spec,omitempty" yaml:"spec,omitempty"`
+	Status ProblemEnvironmentStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
 // ProblemEnvironmentList contains a list of ProblemEnvironment
 type ProblemEnvironmentList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ProblemEnvironment `json:"items"`
+	metav1.TypeMeta `json:",inline" yaml:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	Items           []ProblemEnvironment `json:"items" yaml:"items"`
 }
 
 func init() {
