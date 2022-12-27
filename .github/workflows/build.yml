@@ -8,6 +8,18 @@ jobs:
   build-controller-manager:
     runs-on: ubuntu-latest
     steps:
+    
+      - uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: "projects/907031882243/locations/global/workloadIdentityPools/github/providers/github"
+          service_account: "github-actions-netcon-pms@networkcontest.iam.gserviceaccount.com"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Use gcloud CLI
+        run: gcloud info
+
       - name: Checkout
         uses: actions/checkout@v3
 
