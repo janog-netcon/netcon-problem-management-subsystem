@@ -33,7 +33,7 @@ jobs:
         with:
           context: .
           file: ./cmd/controller-manager/Dockerfile
-          push: false
+          push: true
           tags: |
             asia.gcr.io/networkcontest/netcon-pms-controller-manager:latest
             asia.gcr.io/networkcontest/netcon-pms-controller-manager:master
