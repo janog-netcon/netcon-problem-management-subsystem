@@ -22,34 +22,34 @@ import (
 
 // ProblemSpec defines the desired state of Problem
 type ProblemSpec struct {
-	Template *ProblemEnvironmentTemplate `json:"template"`
+	Template *ProblemEnvironmentTemplate `json:"template" yaml:"template"`
 
-	AssignableReplicas int `json:"assignableReplicas"`
+	AssignableReplicas int `json:"assignableReplicas" yaml:"assignableReplicas"`
 }
 
 type ProblemEnvironmentTemplate struct {
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 
-	Spec ProblemEnvironmentSpec `json:"spec,omitempty"`
+	Spec ProblemEnvironmentSpec `json:"spec,omitempty" yaml:"spec,omitempty"`
 }
 
 // ProblemStatus defines the observed state of Problem
 type ProblemStatus struct {
-	Replicas ProblemReplicas `json:"replicas"`
+	Replicas ProblemReplicas `json:"replicas" yaml:"replicas"`
 }
 
 type ProblemReplicas struct {
 	// Total is the total number of ProblemEnvironments
-	Total int `json:"total"`
+	Total int `json:"total" yaml:"total"`
 
 	// Scheduled is the number of ProblemEnvironments which is scheduled but not ready
-	Scheduled int `json:"scheduled"`
+	Scheduled int `json:"scheduled" yaml:"scheduled"`
 
 	// Assignable is the number of ProblemEnvironments which is ready but not assigned
-	Assignable int `json:"assignable"`
+	Assignable int `json:"assignable" yaml:"assignable"`
 
 	// Assigned is the number of ProblemEnvironments which is assigned
-	Assigned int `json:"assigned"`
+	Assigned int `json:"assigned" yaml:"assigned"`
 }
 
 //+kubebuilder:object:root=true
@@ -63,20 +63,20 @@ type ProblemReplicas struct {
 
 // Problem is the Schema for the problems API
 type Problem struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta   `json:",inline" yaml:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 
-	Spec   ProblemSpec   `json:"spec,omitempty"`
-	Status ProblemStatus `json:"status,omitempty"`
+	Spec   ProblemSpec   `json:"spec,omitempty" yaml:"spec,omitempty"`
+	Status ProblemStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
 // ProblemList contains a list of Problem
 type ProblemList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Problem `json:"items"`
+	metav1.TypeMeta `json:",inline" yaml:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	Items           []Problem `json:"items" yaml:"items"`
 }
 
 func init() {
