@@ -11,15 +11,24 @@ import (
 type ProblemEnvironmentStatus string
 
 const (
-	StatusReady    ProblemEnvironmentStatus = "Ready"
-	StatusNotReady ProblemEnvironmentStatus = "NotReady"
+	// StatusInit indicates ProblemEnvironment has not been deployed yet
+	StatusInit ProblemEnvironmentStatus = "Init"
+
+	// StatusInit indicates ProblemEnvironment was deployed successfully
+	StatusDeployed ProblemEnvironmentStatus = "Deployed"
+
+	// StatusInit indicates ProblemEnvironment was not deployed successfully
+	StatusError ProblemEnvironmentStatus = "Error"
 )
 
 type ProblemEnvironmentDriver interface {
-	// Checks whether problemEnvironment is working or not
-	// Note that even if status returned from Check is *StatusReady*, it doesn't mean all containers are running successfully.
-	// So, you need to check ContainerDetailStatus to ensure all containers are running.
+	// Check whether ProblemEnvironment is deployed or not and return ContainerStatus
+	// []ContainerDetailStatus should be nil if ProblemEnvironment is not deployed successfully
 	Check(ctx context.Context, reader client.Client, problemEnvironment netconv1alpha1.ProblemEnvironment) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus)
+
+	// Deploy ProblemEnvironment
 	Deploy(ctx context.Context, reader client.Client, problemEnvironment netconv1alpha1.ProblemEnvironment) error
+
+	// Destroy ProblemEnvironment
 	Destroy(ctx context.Context, reader client.Client, problemEnvironment netconv1alpha1.ProblemEnvironment) error
 }
