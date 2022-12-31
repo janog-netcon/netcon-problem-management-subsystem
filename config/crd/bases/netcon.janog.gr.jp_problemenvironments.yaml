@@ -26,6 +26,9 @@ spec:
       name: WORKER
       priority: 1
       type: string
+    - jsonPath: .status.conditions[?(@.type=="Deployed")].status
+      name: DEPLOYED
+      type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: READY
       type: string
@@ -178,6 +181,8 @@ spec:
                       properties:
                         containerID:
                           type: string
+                        containerName:
+                          type: string
                         image:
                           type: string
                         managementIPAddress:
@@ -188,6 +193,7 @@ spec:
                           type: boolean
                       required:
                       - containerID
+                      - containerName
                       - image
                       - managementIPAddress
                       - name
