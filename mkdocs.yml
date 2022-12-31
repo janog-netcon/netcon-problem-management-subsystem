@@ -1,8 +1,49 @@
 site_name: netcon-problem-management-subsystem
+
+repo_url: https://github.com/janog-netcon/netcon-problem-management-subsystem
+repo_name: janog-netcon/netcon-problem-management-subsystem
+
 theme:
   name: material
+  favicon: icon.png
+  font: false
   features:
-    - navigation.tabs
-nav:
-  - Development Environment: ./devenv.md
-  - Access Helper: ./access-helper.md
+  - navigation.expand
+  - navigation.instant
+  - navigation.tracking
+  - navigation.top
+  - search.suggest
+  - search.highlight
+  - search.share
+  - tags
+
+markdown_extensions:
+- abbr
+- admonition
+- def_list
+- footnotes
+- tables
+- pymdownx.betterem
+- pymdownx.caret
+- pymdownx.critic
+- pymdownx.details
+- pymdownx.highlight:
+    anchor_linenums: true
+- pymdownx.inlinehilite
+- pymdownx.keys
+- pymdownx.mark
+- pymdownx.superfences:
+    custom_fences:
+      - name: mermaid
+        class: mermaid
+        format: !!python/name:pymdownx.superfences.fence_code_format
+- pymdownx.tabbed:
+    alternate_style: true
+- pymdownx.tasklist:
+    custom_checkbox: true
+- pymdownx.tilde
+
+plugins:
+- search:
+    separator: '[\s]'
+    prebuild_index: true

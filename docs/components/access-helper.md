@@ -1,19 +1,44 @@
 # access-helper
 
-access-helper helps us to access containers in ContainerLab with various ways. Currently, access-helper supports these access methods:
+access-helper works with nclet and bridges users and ProblemEnvironment. 
 
-1. exec: access nodes with `docker exec`
-2. ssh: access nodes through SSH
+```mermaid
+sequenceDiagram
+  actor U as User
+  participant N as nclet
+  participant AH as access-helper
+  participant LS as Login shell
 
-## getting started with access-helper
+  U ->> N: access via SSH
+  Note over N: Authenticate and authorize
 
-You can build access-helper with the following command:
+  N -->> AH: Execute access-helper
 
+  alt if container is not specified
+      AH ->> U: Ask which Node you will access to user
+      U ->> AH: Answer question
+  end
+
+  AH -->> LS: Access login shell 
+  Note over U, LS: Start user session
 ```
-make access-helper-build
-```
 
-In this tutorial, we use the following ContainerLab topology file.
+## Getting started
+
+### Prerequisites
+
+Before getting started, you need to install the following components:
+
+* ContainerLab
+* Golang
+
+### Build
+
+You can build access-helper with `make access-helper-build`.
+
+### Try access-helper
+
+In order to try access-helper, you need to deploy Lab. In this section, we will use the following topology file.
 
 ```yaml
 name: testlab
@@ -22,6 +47,8 @@ topology:
     n1:
       kind: linux
       image: alpine:latest
+      labels:
+        netcon.janog.gr.jp/accessMethod: exec
     n2:
       kind: linux
       image: linuxserver/openssh-server:latest
@@ -37,8 +64,6 @@ topology:
   links:
     - endpoints: ["n1:eth1","n2:eth1"]
 ```
-
-First, deploy this topology on your own machine.
 
 ```
 $ sudo clab -t manifest.yaml deploy
@@ -60,7 +85,7 @@ Run 'containerlab version upgrade' to upgrade or go check other installation opt
 +---+-----------------+--------------+-----------------------------------+-------+---------+-----------------+----------------------+
 ```
 
-And then, you can access nodes with access-helper. Note that you need to execute access-helper with sudo privileges because access-helper needs to execute `containerlab inspect` to fetch management IP addresses for nodes.
+After deploying Lab, you can access nodes with access-helper. Note that you need to execute access-helper with sudo privileges because access-helper needs to execute `containerlab inspect` to fetch management IP addresses for nodes.
 
 ```
 $ sudo ../access-helper -t manifest.yaml n1
