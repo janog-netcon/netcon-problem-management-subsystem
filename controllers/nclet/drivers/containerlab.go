@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	dockerClient "github.com/docker/docker/client"
 	"gopkg.in/yaml.v2"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,14 +22,16 @@ import (
 )
 
 type ContainerLabProblemEnvironmentDriver struct {
-	configDir string
+	configDir    string
+	dockerClient dockerClient.APIClient
 }
 
 var _ ProblemEnvironmentDriver = &ContainerLabProblemEnvironmentDriver{}
 
-func NewContainerLabProblemEnvironmentDriver(configDir string) *ContainerLabProblemEnvironmentDriver {
+func NewContainerLabProblemEnvironmentDriver(configDir string, dockerClient dockerClient.APIClient) *ContainerLabProblemEnvironmentDriver {
 	return &ContainerLabProblemEnvironmentDriver{
-		configDir: configDir,
+		configDir:    configDir,
+		dockerClient: dockerClient,
 	}
 }
 
@@ -197,38 +199,58 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	if !d.fileExists(directoryPath) {
 		// directory not found, ProblemEnvironment haven't been created
 		log.V(1).Info("working directory not found, skip to inspect")
-		return StatusNotReady, nil
+		return StatusInit, nil
 	}
 
 	topologyFilePath := clabClient.TopologyFilePath()
 	if !d.fileExists(topologyFilePath) {
 		log.V(1).Info("topology file not found, skip to inspect")
-		return StatusNotReady, nil
+		return StatusError, nil
 	}
 
 	labData, err := clabClient.Inspect(ctx)
 	if err != nil {
 		log.Error(err, "failed to inspect ContainerLab")
-		return StatusNotReady, nil
+		return StatusError, nil
 	}
 
+	containerPrefix := fmt.Sprintf("clab-%s-", problemEnvironment.Name)
 	containerStatuses := []netconv1alpha1.ContainerDetailStatus{}
 	for i := range labData.Containers {
 		containerDetail := &labData.Containers[i]
 
-		containerPrefix := fmt.Sprintf("clab-%s-", problemEnvironment.Name)
-		containerName := strings.ReplaceAll(containerDetail.Name, containerPrefix, "")
-
-		containerStatuses = append(containerStatuses, netconv1alpha1.ContainerDetailStatus{
-			Name:                containerName,
+		name := strings.ReplaceAll(containerDetail.Name, containerPrefix, "")
+		containerStatus := netconv1alpha1.ContainerDetailStatus{
+			Name:                name,
 			Image:               containerDetail.Image,
 			ContainerID:         containerDetail.ContainerID,
-			Ready:               containerDetail.State == "running",
 			ManagementIPAddress: containerDetail.IPv4Address,
-		})
+		}
+
+		containerInfo, err := d.dockerClient.ContainerInspect(ctx, containerDetail.ContainerID)
+		if err != nil {
+			log.Error(err, "failed to fetch container information from docker daemon")
+			containerStatuses = append(containerStatuses, containerStatus)
+			continue
+		}
+
+		ready := false
+		if containerInfo.State.Health == nil {
+			// If containerInfo doesn't have Health, we can consider the container is ready
+			ready = true
+		} else if containerInfo.State.Health.Status == "healthy" {
+			// If Health.Status is "healthy", we can consider the container is ready
+			// ref: https://pkg.go.dev/github.com/docker/docker/api/types#Health
+			ready = true
+		}
+
+		containerStatus.ContainerName = containerInfo.Name
+		containerStatus.Ready = ready
+
+		containerStatuses = append(containerStatuses, containerStatus)
 	}
 
-	return StatusReady, containerStatuses
+	return StatusDeployed, containerStatuses
 }
 
 // Deploy implements ProblemEnvironmentDriver
@@ -292,7 +314,7 @@ func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 
 	status, _ := d.Check(ctx, client, problemEnvironment)
 
-	if status == StatusReady {
+	if status == StatusDeployed {
 		if err := clabClient.Destroy(ctx); err != nil {
 			return fmt.Errorf("failed to destroy ContainerLab: %w", err)
 		}

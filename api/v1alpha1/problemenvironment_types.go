@@ -28,8 +28,12 @@ const (
 	// * Worker where ProblemEnvironment is scheduled exists
 	ProblemEnvironmentConditionScheduled ProblemEnvironmentConditionType = "Scheduled"
 
+	// Deployed will be True when:
+	// * ProblemEnvironment is deployed on Worker
+	ProblemEnvironmentConditionDeployed ProblemEnvironmentConditionType = "Deployed"
+
 	// Ready will be True when:
-	// * ProblemEnvironment is instantiated on Worker
+	// * ProblemEnvironment is ready on Worker
 	ProblemEnvironmentConditionReady ProblemEnvironmentConditionType = "Ready"
 
 	// Assigned will be True when:
@@ -75,6 +79,7 @@ type ContainerDetailStatus struct {
 	Name                string `json:"name" yaml:"name"`
 	Image               string `json:"image" yaml:"image"`
 	ContainerID         string `json:"containerID" yaml:"containerID"`
+	ContainerName       string `json:"containerName" yaml:"containerName"`
 	Ready               bool   `json:"ready" yaml:"ready"`
 	ManagementIPAddress string `json:"managementIPAddress" yaml:"managementIPAddress"`
 }
@@ -84,6 +89,7 @@ type ContainerDetailStatus struct {
 //+kubebuilder:resource:shortName={pe,probenv}
 //+kubebuilder:printcolumn:name=SCHEDULED,type=string,JSONPath=.status.conditions[?(@.type=="Scheduled")].status
 //+kubebuilder:printcolumn:name=WORKER,type=string,JSONPath=.spec.workerName,priority=1
+//+kubebuilder:printcolumn:name=DEPLOYED,type=string,JSONPath=.status.conditions[?(@.type=="Deployed")].status
 //+kubebuilder:printcolumn:name=READY,type=string,JSONPath=.status.conditions[?(@.type=="Ready")].status
 //+kubebuilder:printcolumn:name=ASSIGNED,type=string,JSONPath=.status.conditions[?(@.type=="Assigned")].status
 //+kubebuilder:printcolumn:name=CONTAINERS,type=string,JSONPath=.status.containers.summary,priority=1

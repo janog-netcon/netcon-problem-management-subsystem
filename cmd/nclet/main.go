@@ -25,6 +25,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/docker/docker/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -91,7 +92,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	driver := drivers.NewContainerLabProblemEnvironmentDriver(configDir)
+	dockerClient, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		setupLog.Error(err, "failed to create docker client")
+	}
+
+	driver := drivers.NewContainerLabProblemEnvironmentDriver(configDir, dockerClient)
 
 	workerName, err := os.Hostname()
 	if err != nil {

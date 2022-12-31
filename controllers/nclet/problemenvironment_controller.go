@@ -33,6 +33,7 @@ import (
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet/drivers"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
+	"github.com/pkg/errors"
 )
 
 const ProblemEnvironmentFinalizer string = "problemenvironment.netcon.janog.gr.jp"
@@ -92,17 +93,16 @@ func (r *ProblemEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return r.update(ctx, &problemEnvironment, ctrl.Result{})
 	}
 
-	// once if deploy is failed, nclet stop to handle it
-	if util.GetProblemEnvironmentCondition(
+	deployed := util.GetProblemEnvironmentCondition(
 		&problemEnvironment,
-		netconv1alpha1.ProblemEnvironmentConditionReady,
-	) == metav1.ConditionFalse {
-		log.Info("skipping to deploy because deploy was failed")
-		return ctrl.Result{}, nil
+		netconv1alpha1.ProblemEnvironmentConditionDeployed,
+	) == metav1.ConditionTrue
+
+	if !deployed {
+		return r.deploy(ctx, &problemEnvironment)
 	}
 
-	log.Info("ensuring instance")
-	return r.ensureInstance(ctx, &problemEnvironment)
+	return r.check(ctx, &problemEnvironment)
 }
 
 func (r *ProblemEnvironmentReconciler) update(
@@ -205,88 +205,55 @@ func (r *ProblemEnvironmentReconciler) updateContainerStatus(
 	return ctrl.Result{RequeueAfter: StatusRefreshInterval}, nil
 }
 
-func (r *ProblemEnvironmentReconciler) ensureInstance(
+func (r *ProblemEnvironmentReconciler) deploy(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
-	status, containerDetailStatuses := r.ProblemEnvironmentDriver.Check(ctx, r.Client, *problemEnvironment)
+	status, _ := r.ProblemEnvironmentDriver.Check(ctx, r.Client, *problemEnvironment)
 
-	log.V(1).Info("checked the status of ProblemEnvironment", "status", status)
-
-	// TODO: a little redundant...
 	switch status {
-	case drivers.StatusReady:
-		reason := "Instantiated"
-		message := "ProblemEnvironment is instantiated"
+	case drivers.StatusInit:
+		r.ProblemEnvironmentDriver.Deploy(ctx, r.Client, *problemEnvironment)
+
+		reason := "Deployed"
+		message := "ProblemEnvironment is deployed"
+		log.Info(message)
 		util.SetProblemEnvironmentCondition(
 			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionReady,
+			netconv1alpha1.ProblemEnvironmentConditionDeployed,
 			metav1.ConditionTrue,
 			reason,
 			message,
 		)
-		return r.updateContainerStatus(ctx, problemEnvironment, containerDetailStatuses)
-	case drivers.StatusNotReady:
-		err := r.ProblemEnvironmentDriver.Deploy(ctx, r.Client, *problemEnvironment)
-		status, containerDetailStatuses := r.ProblemEnvironmentDriver.Check(ctx, r.Client, *problemEnvironment)
-
-		switch status {
-		case drivers.StatusReady:
-			reason := "Instantiated"
-			message := "ProblemEnvironment is instantiated"
-			log.Info(message)
-			util.SetProblemEnvironmentCondition(
-				problemEnvironment,
-				netconv1alpha1.ProblemEnvironmentConditionReady,
-				metav1.ConditionTrue,
-				reason,
-				message,
-			)
-			util.SetProblemEnvironmentCondition(
-				problemEnvironment,
-				netconv1alpha1.ProblemEnvironmentConditionAssigned,
-				metav1.ConditionFalse,
-				reason,
-				message,
-			)
-			return r.updateContainerStatus(ctx, problemEnvironment, containerDetailStatuses)
-		case drivers.StatusNotReady:
-			message := "failed to deploy ProblemEnvironment"
-			log.Error(err, message)
-			util.SetProblemEnvironmentCondition(
-				problemEnvironment,
-				netconv1alpha1.ProblemEnvironmentConditionReady,
-				metav1.ConditionFalse,
-				"DeployFailed",
-				message,
-			)
-			return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
-		default:
-			reason := "Unknown"
-			message := "Internal error"
-			util.SetProblemEnvironmentCondition(
-				problemEnvironment,
-				netconv1alpha1.ProblemEnvironmentConditionReady,
-				metav1.ConditionTrue,
-				reason,
-				message,
-			)
-			return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
-		}
-	default:
-		reason := "Unknown"
-		message := "Internal error"
+		return r.check(ctx, problemEnvironment)
+	default: // StatusReady, StatusError
+		err := errors.New("unexpected state")
+		message := "internal error"
+		log.Error(err, message)
 		util.SetProblemEnvironmentCondition(
 			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionReady,
+			netconv1alpha1.ProblemEnvironmentConditionDeployed,
 			metav1.ConditionTrue,
-			reason,
+			"DeployFailed",
 			message,
 		)
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
 	}
+}
+
+func (r *ProblemEnvironmentReconciler) check(
+	ctx context.Context,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) (ctrl.Result, error) {
+	_, containerDetailStatuses := r.ProblemEnvironmentDriver.Check(ctx, r.Client, *problemEnvironment)
+
+	return r.updateContainerStatus(
+		ctx,
+		problemEnvironment,
+		containerDetailStatuses,
+	)
 }
 
 // SetupWithManager sets up the controller with the Manager.
