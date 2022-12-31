@@ -79,13 +79,21 @@ func (r *ProblemEnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	if problemEnvironment.Spec.WorkerName == "" {
-		log.Info("not scheduled yet, scheduling")
-		return r.schedule(ctx, &problemEnvironment)
+	scheduled := util.GetProblemEnvironmentCondition(
+		&problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionScheduled,
+	) == metav1.ConditionTrue
+
+	if !scheduled {
+		if problemEnvironment.Spec.WorkerName == "" {
+			log.Info("not scheduled yet, scheduling")
+			return r.schedule(ctx, &problemEnvironment)
+		}
+
+		return r.confirmSchedule(ctx, &problemEnvironment)
 	}
 
-	log.Info("already scheduled, confirming schedule")
-	return r.confirmSchedule(ctx, &problemEnvironment)
+	return r.checkStatus(ctx, &problemEnvironment)
 }
 
 func (r *ProblemEnvironmentReconciler) update(
@@ -95,11 +103,10 @@ func (r *ProblemEnvironmentReconciler) update(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 	if err := r.Update(ctx, problemEnvironment); err != nil {
-		// TODO(proelbtn): try to adopt exponentialBackOff
 		log.Error(err, "failed to update")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func (r *ProblemEnvironmentReconciler) updateStatus(
@@ -109,11 +116,10 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 	if err := r.Status().Update(ctx, problemEnvironment); err != nil {
-		// TODO(proelbtn): try to adopt exponentialBackOff
 		log.Error(err, "failed to update status")
-		return ctrl.Result{RequeueAfter: 3 * time.Second}, err
+		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return res, nil
 }
 
 func (r *ProblemEnvironmentReconciler) electWorker(
@@ -179,8 +185,6 @@ func (r *ProblemEnvironmentReconciler) schedule(
 			"WorkersMissing",
 			message,
 		)
-
-		// TODO(proelbtn): try to adopt exponentialBackOff
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
 	}
 
@@ -194,8 +198,6 @@ func (r *ProblemEnvironmentReconciler) schedule(
 			"WorkersNotSchedulable",
 			message,
 		)
-
-		// TODO(proelbtn): try to adopt exponentialBackOff
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
 	}
 
@@ -203,7 +205,14 @@ func (r *ProblemEnvironmentReconciler) schedule(
 	if err := r.List(ctx, &problemEnvironments); err != nil {
 		message := "failed to list ProblemEnvironments"
 		log.Error(err, message)
-		// TODO: handle error
+		util.SetProblemEnvironmentCondition(
+			problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionScheduled,
+			metav1.ConditionFalse,
+			"WorkersNotSchedulable",
+			message,
+		)
+		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
 	}
 
 	electedWorkerName := r.electWorker(ctx, workers, problemEnvironments)
@@ -231,7 +240,6 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
-	statusUpdated := false
 
 	log.V(1).Info("fetching Worker scheduled")
 	worker := netconv1alpha1.Worker{}
@@ -247,34 +255,90 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 			"WorkersMissing",
 			message,
 		)
-
-		// TODO(proelbtn): try to adopt exponentialBackOff
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
 	}
 
-	if util.GetProblemEnvironmentCondition(
+	log.Info("confirmed", "workerName", problemEnvironment.Spec.WorkerName)
+	util.SetProblemEnvironmentCondition(
 		problemEnvironment,
 		netconv1alpha1.ProblemEnvironmentConditionScheduled,
-	) != metav1.ConditionTrue {
-		log.Info("confirmed", "workerName", problemEnvironment.Spec.WorkerName)
-		util.SetProblemEnvironmentCondition(
-			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionScheduled,
-			metav1.ConditionTrue,
-			"Scheduled", "ProblemEnvironment is assigned to Worker",
-		)
-		statusUpdated = true
-	}
-
-	if problemEnvironment.Status.Password == "" {
-		problemEnvironment.Status.Password = generatePassword(24)
-		statusUpdated = true
-	}
-
-	if !statusUpdated {
-		return ctrl.Result{}, nil
-	}
+		metav1.ConditionTrue,
+		"Scheduled", "ProblemEnvironment is assigned to Worker",
+	)
+	util.SetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionDeployed,
+		metav1.ConditionFalse,
+		"NotDeployed", "ProblemEnvironment is not deployed to Worker",
+	)
+	util.SetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+		metav1.ConditionFalse,
+		"NotReady", "ProblemEnvironment is not ready",
+	)
+	util.SetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionAssigned,
+		metav1.ConditionFalse,
+		"NotAssigned", "ProblemEnvironment is not assigned",
+	)
+	problemEnvironment.Status.Password = generatePassword(24)
 	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
+}
+
+func (r *ProblemEnvironmentReconciler) markReady(
+	ctx context.Context,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	res ctrl.Result,
+) (ctrl.Result, error) {
+	util.SetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+		metav1.ConditionTrue,
+		"Ready", "ProblemEnvironment is ready",
+	)
+	return r.updateStatus(ctx, problemEnvironment, res)
+}
+
+func (r *ProblemEnvironmentReconciler) markNotReady(
+	ctx context.Context,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	res ctrl.Result,
+) (ctrl.Result, error) {
+	util.SetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+		metav1.ConditionFalse,
+		"NotReady", "ProblemEnvironment is not ready",
+	)
+	return r.updateStatus(ctx, problemEnvironment, res)
+}
+
+func (r *ProblemEnvironmentReconciler) checkStatus(
+	ctx context.Context,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
+	log.V(1).Info("checking status")
+
+	if problemEnvironment.Status.Containers == nil {
+		return r.markNotReady(ctx, problemEnvironment, ctrl.Result{})
+	}
+
+	containerDetails := problemEnvironment.Status.Containers.Details
+	if len(containerDetails) == 0 {
+		return r.markNotReady(ctx, problemEnvironment, ctrl.Result{})
+	}
+
+	for _, containerDetail := range containerDetails {
+		if !containerDetail.Ready {
+			return r.markNotReady(ctx, problemEnvironment, ctrl.Result{})
+		}
+	}
+
+	return r.markReady(ctx, problemEnvironment, ctrl.Result{})
 }
 
 // SetupWithManager sets up the controller with the Manager.
