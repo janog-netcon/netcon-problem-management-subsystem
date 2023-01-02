@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	clientset "github.com/janog-netcon/netcon-problem-management-subsystem/pkg/clientset/v1alpha1"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/kubectl-netcon/deploylog"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/printers"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -32,7 +32,9 @@ func newProblemEnvironmentCmd() *cobra.Command {
 }
 
 func newProblemEnvironmentListCmd() *cobra.Command {
-	return &cobra.Command{
+	var verbose bool
+
+	cmd := &cobra.Command{
 		Use:          "list",
 		Short:        "List ProblemEnvironment",
 		SilenceUsage: true,
@@ -51,18 +53,31 @@ func newProblemEnvironmentListCmd() *cobra.Command {
 				return err
 			}
 
-			list, err := clientset.ProblemEnvironment(*globalConfig.configFlags.Namespace).List(ctx, metav1.ListOptions{})
+			problemEnvironmentList, err := clientset.
+				ProblemEnvironment(*globalConfig.configFlags.Namespace).
+				List(ctx, metav1.ListOptions{})
 			if err != nil {
 				return err
 			}
 
-			for _, d := range list.Items {
-				fmt.Println(d.Name)
+			printOptions := printers.PrintOptions{}
+			if verbose {
+				printOptions.Wide = true
 			}
+
+			printers.PrintObject(
+				os.Stdout,
+				problemEnvironmentList,
+				printOptions,
+			)
 
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show more verbose log")
+
+	return cmd
 }
 
 func newProblemEnvironmentShowDeployLogCmd() *cobra.Command {
