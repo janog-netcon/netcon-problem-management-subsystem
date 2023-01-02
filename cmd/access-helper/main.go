@@ -30,7 +30,7 @@ func askUserForNode(config *containerlab.Config, isAdmin bool) string {
 	}
 
 	sort.Strings(nodeNames)
-	
+
 	fmt.Println("Enter the number of the node you want to access")
 
 	fmt.Println("Nodes:")
@@ -163,7 +163,7 @@ func main() {
 				}
 				accessNode(ctx, client, config, nodeName, isAdmin)
 			}
-			
+
 			return nil
 		},
 	}
