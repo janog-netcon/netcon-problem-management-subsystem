@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.19.2
+          cache: true
 
       - name: Cache test tools
         uses: actions/cache@v3
