@@ -9,12 +9,9 @@ on:
 
 jobs:
   medium:
-    runs-on: [self-hosted]
-
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          clean: false
 
       - name: Set up Go 1.19.2
         uses: actions/setup-go@v1
@@ -24,5 +21,3 @@ jobs:
       - name: run make test
         run: |
           make test
-        env:
-          LOCALBIN: '/home/sanosei/k8sbin'
