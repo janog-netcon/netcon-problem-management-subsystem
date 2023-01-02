@@ -13,14 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Go 1.19.2
-        uses: actions/setup-go@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: 1.19.2
           cache: true
 
-      - name: Cache test tools
-        uses: actions/cache@v3
+      - uses: actions/cache@v3
         with:
           path: bin
 
