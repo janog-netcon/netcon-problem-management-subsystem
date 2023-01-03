@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -124,9 +125,15 @@ func newProblemEnvironmentDeleteCmd() *cobra.Command {
 			}
 
 			propagationPolicy := metav1.DeletePropagationForeground
-			return client.Delete(ctx, name, metav1.DeleteOptions{
+			if err := client.Delete(ctx, name, metav1.DeleteOptions{
 				PropagationPolicy: &propagationPolicy,
-			})
+			}); err != nil {
+				return err
+			}
+
+			fmt.Printf("ProblemEnvironment \"%s\" deleted\n", name)
+
+			return nil
 		},
 	}
 
@@ -190,6 +197,8 @@ func newProblemEnvironmentAssignCmd() *cobra.Command {
 				return err
 			}
 
+			fmt.Printf("ProblemEnvironment \"%s\" assigned\n", name)
+
 			return nil
 		},
 	}
@@ -244,6 +253,8 @@ func newProblemEnvironmentUnassignCmd() *cobra.Command {
 			if _, err := client.UpdateStatus(ctx, problemEnvironment, metav1.UpdateOptions{}); err != nil {
 				return err
 			}
+
+			fmt.Printf("ProblemEnvironment \"%s\" unassigned\n", name)
 
 			return nil
 		},
