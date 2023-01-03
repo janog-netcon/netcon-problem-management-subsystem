@@ -18,10 +18,12 @@ package controllers
 
 import (
 	"context"
-	"math/rand"
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"math/big"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,22 +43,30 @@ type ProblemEnvironmentReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-const (
-	MAX_USED_PERCENT float64 = 100.0
-)
+const MAX_USED_PERCENT float64 = 100.0
+const DEFAULT_PASSWORD_LENGTH = 24
 
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problems,verbs=get;list;watch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers,verbs=get;list;watch
 
-func generatePassword(length uint) string {
-	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-	var b strings.Builder
-	for i := uint(0); i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
+func generatePassword(length int) (string, error) {
+	if length < 0 {
+		return "", errors.New("invalid length")
 	}
-	return b.String()
+
+	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	var buf = make([]rune, length)
+	for i := 0; i < length; i++ {
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		if err != nil {
+			return "", err
+		}
+		buf[i] = chars[idx.Int64()]
+	}
+
+	return string(buf), nil
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -258,6 +268,11 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
 	}
 
+	password, err := generatePassword(DEFAULT_PASSWORD_LENGTH)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to confirm schedule: %w", err)
+	}
+
 	log.Info("confirmed", "workerName", problemEnvironment.Spec.WorkerName)
 	util.SetProblemEnvironmentCondition(
 		problemEnvironment,
@@ -283,7 +298,7 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 		metav1.ConditionFalse,
 		"NotAssigned", "ProblemEnvironment is not assigned",
 	)
-	problemEnvironment.Status.Password = generatePassword(24)
+	problemEnvironment.Status.Password = password
 	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
 }
 
