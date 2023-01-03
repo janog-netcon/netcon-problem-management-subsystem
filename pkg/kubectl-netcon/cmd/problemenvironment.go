@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -9,6 +10,7 @@ import (
 	clientset "github.com/janog-netcon/netcon-problem-management-subsystem/pkg/clientset/v1alpha1"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/kubectl-netcon/deploylog"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/printers"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -26,6 +28,9 @@ func newProblemEnvironmentCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(newProblemEnvironmentListCmd())
+	cmd.AddCommand(newProblemEnvironmentDeleteCmd())
+	cmd.AddCommand(newProblemEnvironmentAssignCmd())
+	cmd.AddCommand(newProblemEnvironmentUnassignCmd())
 	cmd.AddCommand(newProblemEnvironmentShowDeployLogCmd())
 
 	return cmd
@@ -53,9 +58,9 @@ func newProblemEnvironmentListCmd() *cobra.Command {
 				return err
 			}
 
-			problemEnvironmentList, err := clientset.
-				ProblemEnvironment(*globalConfig.configFlags.Namespace).
-				List(ctx, metav1.ListOptions{})
+			client := clientset.ProblemEnvironment(*globalConfig.configFlags.Namespace)
+
+			problemEnvironmentList, err := client.List(ctx, metav1.ListOptions{})
 			if err != nil {
 				return err
 			}
@@ -80,6 +85,173 @@ func newProblemEnvironmentListCmd() *cobra.Command {
 	return cmd
 }
 
+func newProblemEnvironmentDeleteCmd() *cobra.Command {
+	var force bool
+
+	cmd := &cobra.Command{
+		Use:          "delete",
+		Short:        "Delete ProblemEnvironment",
+		SilenceUsage: true,
+		Args:         cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			name := args[0]
+
+			v1alpha1.AddToScheme(scheme.Scheme)
+
+			config, err := globalConfig.configFlags.ToRESTConfig()
+			if err != nil {
+				return err
+			}
+
+			clientset, err := clientset.NewForConfig(config)
+			if err != nil {
+				return err
+			}
+
+			client := clientset.ProblemEnvironment(*globalConfig.configFlags.Namespace)
+
+			problemEnvironment, err := client.Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			if !force && util.GetProblemEnvironmentCondition(
+				problemEnvironment,
+				v1alpha1.ProblemEnvironmentConditionAssigned,
+			) == metav1.ConditionTrue {
+				return errors.New("failed to delete: ProblemEnvironment is already assigned, please unassign before deleting")
+			}
+
+			propagationPolicy := metav1.DeletePropagationForeground
+			return client.Delete(ctx, name, metav1.DeleteOptions{
+				PropagationPolicy: &propagationPolicy,
+			})
+		},
+	}
+
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Delete ProblemEnvironment even if it is already assigned")
+
+	return cmd
+}
+
+func newProblemEnvironmentAssignCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:          "assign",
+		Short:        "Assign ProblemEnvironment for debug purpose",
+		SilenceUsage: true,
+		Args:         cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			name := args[0]
+
+			v1alpha1.AddToScheme(scheme.Scheme)
+
+			config, err := globalConfig.configFlags.ToRESTConfig()
+			if err != nil {
+				return err
+			}
+
+			clientset, err := clientset.NewForConfig(config)
+			if err != nil {
+				return err
+			}
+
+			client := clientset.ProblemEnvironment(*globalConfig.configFlags.Namespace)
+
+			problemEnvironment, err := client.Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			if util.GetProblemEnvironmentCondition(
+				problemEnvironment,
+				v1alpha1.ProblemEnvironmentConditionReady,
+			) != metav1.ConditionTrue {
+				return errors.New("failed to update status: ProblemEnvironment is not ready")
+			}
+
+			if util.GetProblemEnvironmentCondition(
+				problemEnvironment,
+				v1alpha1.ProblemEnvironmentConditionAssigned,
+			) != metav1.ConditionFalse {
+				return errors.New("failed to update status: ProblemEnvironment is already assigned")
+			}
+
+			util.SetProblemEnvironmentCondition(
+				problemEnvironment,
+				v1alpha1.ProblemEnvironmentConditionAssigned,
+				metav1.ConditionTrue,
+				"AdminUpdated",
+				"assigned by admin forcibly",
+			)
+
+			if _, err := client.UpdateStatus(ctx, problemEnvironment, metav1.UpdateOptions{}); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+func newProblemEnvironmentUnassignCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:          "unassign",
+		Short:        "Unassign ProblemEnvironment for debug purpose",
+		SilenceUsage: true,
+		Args:         cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			name := args[0]
+
+			v1alpha1.AddToScheme(scheme.Scheme)
+
+			config, err := globalConfig.configFlags.ToRESTConfig()
+			if err != nil {
+				return err
+			}
+
+			clientset, err := clientset.NewForConfig(config)
+			if err != nil {
+				return err
+			}
+
+			client := clientset.ProblemEnvironment(*globalConfig.configFlags.Namespace)
+
+			problemEnvironment, err := client.Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			if util.GetProblemEnvironmentCondition(
+				problemEnvironment,
+				v1alpha1.ProblemEnvironmentConditionAssigned,
+			) != metav1.ConditionTrue {
+				return errors.New("failed to update status: ProblemEnvironment is not assigned")
+			}
+
+			util.SetProblemEnvironmentCondition(
+				problemEnvironment,
+				v1alpha1.ProblemEnvironmentConditionAssigned,
+				metav1.ConditionFalse,
+				"AdminUpdated",
+				"assigned by admin forcibly",
+			)
+
+			if _, err := client.UpdateStatus(ctx, problemEnvironment, metav1.UpdateOptions{}); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	return cmd
+}
+
 func newProblemEnvironmentShowDeployLogCmd() *cobra.Command {
 	var verbose bool
 
@@ -87,12 +259,10 @@ func newProblemEnvironmentShowDeployLogCmd() *cobra.Command {
 		Use:          "show-deploy-log",
 		Short:        "Show deploy log for given ProblemEnvironment",
 		SilenceUsage: true,
+		Args:         cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return nil
-			}
-
 			ctx := cmd.Context()
+			name := args[0]
 
 			v1alpha1.AddToScheme(scheme.Scheme)
 
@@ -130,39 +300,31 @@ func newProblemEnvironmentShowDeployLogCmd() *cobra.Command {
 				return err
 			}
 
-			problemEnvironmentList, err := problemEnvironmentClient.List(ctx, metav1.ListOptions{})
+			problemEnvironment, err := problemEnvironmentClient.Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
 
-			problemEnvironmentName := args[0]
-
-			for _, problemEnvironment := range problemEnvironmentList.Items {
-				if problemEnvironment.Name != problemEnvironmentName {
+			for _, configMap := range configMapList.Items {
+				if !strings.HasPrefix(configMap.Name, "deploy-"+problemEnvironment.Name) {
 					continue
 				}
 
-				for _, configMap := range configMapList.Items {
-					if !strings.HasPrefix(configMap.Name, "deploy-"+problemEnvironment.Name) {
-						continue
-					}
-
-					stderr, ok := configMap.Data["stderr"]
-					if !ok {
-						continue
-					}
-
-					log, err := parser.Parse([]byte(stderr))
-					if err != nil {
-						return err
-					}
-
-					if err := printer.Print(log); err != nil {
-						return err
-					}
-
-					return nil
+				stderr, ok := configMap.Data["stderr"]
+				if !ok {
+					continue
 				}
+
+				log, err := parser.Parse([]byte(stderr))
+				if err != nil {
+					return err
+				}
+
+				if err := printer.Print(log); err != nil {
+					return err
+				}
+
+				break
 			}
 
 			return nil
