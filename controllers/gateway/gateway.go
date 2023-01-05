@@ -26,7 +26,7 @@ type Gateway struct {
 }
 
 type ProblemEnvironmentItem struct {
-	ProblemEnvironment netconv1alpha1.ProblemEnvironment `json:"problem_environment"`
+	ProblemEnvironment netconv1alpha1.ProblemEnvironment `json:"problemEnvironment"`
 	Worker             netconv1alpha1.Worker             `json:"worker"`
 }
 
