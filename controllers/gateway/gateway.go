@@ -25,8 +25,17 @@ type Gateway struct {
 	client.Client
 }
 
+type ProblemEnvironmentItem struct {
+	ProblemEnvironment netconv1alpha1.ProblemEnvironment `json:"problem_environment"`
+	Worker             netconv1alpha1.Worker             `json:"worker"`
+}
+
+type ProblemEnvironmentList struct {
+	Items []ProblemEnvironmentItem `json:"items"`
+}
+
 type ProblemEnvironmentResponse struct {
-	Response netconv1alpha1.ProblemEnvironmentList `json:"response"`
+	Response ProblemEnvironmentList `json:"response"`
 }
 
 type PostProblemEnvironmentRequest struct {
@@ -70,16 +79,28 @@ func (g *Gateway) GetProblemEnvironmentHandlerFunc(ctx context.Context) echo.Han
 		log := log.FromContext(ctx)
 		problemEnvironmentName := c.Param("name")
 
-		problemEnvironment, err := g.GetProblemEnvironment(ctx, problemEnvironmentName)
+		netconV1Alpha1ProblemEnvironment, err := g.GetProblemEnvironment(ctx, problemEnvironmentName)
 		if err != nil {
-			log.Error(err, "failed to get problem environment list")
+			log.Error(err, "failed to get problem environment")
 			return err
 		}
 
-		problemEnvironmentList := netconv1alpha1.ProblemEnvironmentList{}
-		problemEnvironments := []netconv1alpha1.ProblemEnvironment{}
-		problemEnvironments = append(problemEnvironments, problemEnvironment)
-		problemEnvironmentList.Items = problemEnvironments
+		workerName := netconV1Alpha1ProblemEnvironment.Spec.WorkerName
+		worker, err := g.GetWorker(ctx, workerName)
+		if err != nil {
+			log.Error(err, "failed to get worker")
+			return err
+		}
+
+		problemEnvironmentItem := ProblemEnvironmentItem{}
+		problemEnvironmentItem.ProblemEnvironment = netconV1Alpha1ProblemEnvironment
+		problemEnvironmentItem.Worker = worker
+
+		problemEnvironmentItems := []ProblemEnvironmentItem{}
+		problemEnvironmentItems = append(problemEnvironmentItems, problemEnvironmentItem)
+
+		problemEnvironmentList := ProblemEnvironmentList{}
+		problemEnvironmentList.Items = problemEnvironmentItems
 
 		problemEnvironmentResponse := ProblemEnvironmentResponse{}
 		problemEnvironmentResponse.Response = problemEnvironmentList
@@ -119,12 +140,12 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 			if pe.Labels["problemName"] == problemName && assignedCondition == metav1.ConditionFalse && readyCondition == metav1.ConditionTrue {
 				selectedItems = append(selectedItems, pe)
 
-				message := "Assigned ProblemEnvironemnt " + pe.Name
+				message := "Assigned ProblemEnvironment " + pe.Name
 				util.SetProblemEnvironmentCondition(
 					&pe,
 					netconv1alpha1.ProblemEnvironmentConditionAssigned,
 					metav1.ConditionTrue,
-					"AssignedProblemEnvironemnt",
+					"AssignedProblemEnvironment",
 					message,
 				)
 				g.updateStatus(ctx, &pe, ctrl.Result{})
@@ -136,10 +157,24 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 			return c.JSONBlob(http.StatusInternalServerError, nil)
 		}
 
-		problemEnvironments.Items = selectedItems
+		workerName := selectedItems[0].Spec.WorkerName
+		worker, err := g.GetWorker(ctx, workerName)
+		if err != nil {
+			log.Error(err, "failed to get worker")
+			return err
+		}
+		problemEnvironmentItem := ProblemEnvironmentItem{}
+		problemEnvironmentItem.ProblemEnvironment = selectedItems[0]
+		problemEnvironmentItem.Worker = worker
+
+		problemEnvironmentItems := []ProblemEnvironmentItem{}
+		problemEnvironmentItems = append(problemEnvironmentItems, problemEnvironmentItem)
+
+		problemEnvironmentList := ProblemEnvironmentList{}
+		problemEnvironmentList.Items = problemEnvironmentItems
 
 		problemEnvironmentResponse := ProblemEnvironmentResponse{}
-		problemEnvironmentResponse.Response = problemEnvironments
+		problemEnvironmentResponse.Response = problemEnvironmentList
 
 		var b bytes.Buffer
 		encoder := json.NewEncoder(&b)
@@ -191,4 +226,14 @@ func (g *Gateway) GetProblemEnvironment(ctx context.Context, problemEnvironmentN
 		return problemEnvironment, err
 	}
 	return problemEnvironment, nil
+}
+
+func (g *Gateway) GetWorker(ctx context.Context, workerName string) (netconv1alpha1.Worker, error) {
+	log := log.FromContext(ctx)
+	worker := netconv1alpha1.Worker{}
+	if err := g.Client.Get(ctx, types.NamespacedName{Name: workerName}, &worker); err != nil {
+		log.Error(err, "could not get worker")
+		return worker, err
+	}
+	return worker, nil
 }
