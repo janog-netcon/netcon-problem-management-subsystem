@@ -1,0 +1,10 @@
+apiVersion: netcon.janog.gr.jp/v1alpha1
+kind: ProblemEnvironment
+metadata:
+  namespace: default
+  name: tst-002
+spec:
+  topologyFile:
+    configMapRef:
+      name: tst-002
+      key: manifest.yml

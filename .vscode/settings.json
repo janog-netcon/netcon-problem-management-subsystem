@@ -1,4 +1,5 @@
 {
+    "go.testFlags": ["-ginkgo.no-color"],
     "go.testEnvVars": {
         "KUBEBUILDER_ASSETS": "${workspaceFolder}/bin/k8s/1.25.0-linux-amd64"
     }

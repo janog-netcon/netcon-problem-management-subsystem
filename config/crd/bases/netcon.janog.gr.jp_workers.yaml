@@ -32,6 +32,14 @@ spec:
             type: string
           metadata:
             type: object
+          spec:
+            description: WorkerStatus defines the desired state of Worker
+            properties:
+              disableSchedule:
+                type: boolean
+            required:
+            - disableSchedule
+            type: object
           status:
             description: WorkerStatus defines the observed state of Worker
             properties:
