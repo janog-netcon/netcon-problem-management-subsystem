@@ -9,4 +9,5 @@ docker run -d --name nclet \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v $(pwd)/kubeconfig:/etc/kubernetes/kubeconfig \
     -v /data:/data \
-    netcon-pms-nclet:dev
+    netcon-pms-nclet:dev -admin-password "netcon-pms"
+

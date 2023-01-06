@@ -75,13 +75,15 @@ type SSHServer struct {
 	client.Client
 
 	sshAddr string
+
+	adminPassword string
 }
 
-func NewSSHServer(sshAddr string) *SSHServer {
+func NewSSHServer(sshAddr string, adminPassword string) *SSHServer {
 	return &SSHServer{
-		sshAddr: sshAddr,
+		sshAddr:       sshAddr,
+		adminPassword: adminPassword,
 	}
-
 }
 
 var _ manager.Runnable = &SSHServer{}
@@ -161,8 +163,7 @@ func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.C
 	}
 
 	if user.Admin {
-		// TODO: password authentication for user
-		return true
+		return password == r.adminPassword
 	} else {
 		problemEnvironment := netconv1alpha1.ProblemEnvironment{}
 		if err := r.Get(ctx, types.NamespacedName{
@@ -176,14 +177,10 @@ func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.C
 			&problemEnvironment,
 			netconv1alpha1.ProblemEnvironmentConditionAssigned,
 		) != metav1.ConditionTrue {
-			// TODO(proelbtn): Gateway is not found now. So, I bypassed "Assigned" check
-		}
-
-		if problemEnvironment.Status.Password != password {
 			return false
 		}
 
-		return true
+		return password == problemEnvironment.Status.Password
 	}
 }
 
