@@ -82,23 +82,13 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 
 	metricsCollectTicker := time.NewTicker(1 * time.Second)
 
-	target := types.NamespacedName{
-		// TODO: fix hardcode
-		Namespace: "netcon",
-		Name:      a.workerName,
-	}
-
 	worker := netconv1alpha1.Worker{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: target.Namespace,
-			Name:      target.Name,
+			Name: a.workerName,
 		},
 	}
 
 	if _, err := ctrl.CreateOrUpdate(ctx, a, &worker, func() error {
-		// Without following code block, CreateOrUpdate will fail
-		worker.Namespace = target.Namespace
-		worker.Name = target.Name
 		return nil
 	}); err != nil {
 		return err
@@ -119,7 +109,9 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 
 			worker := netconv1alpha1.Worker{}
 
-			if err := a.Get(ctx, target, &worker); err != nil {
+			if err := a.Get(ctx, types.NamespacedName{
+				Name: a.workerName,
+			}, &worker); err != nil {
 				log.Error(err, "failed to get Worker")
 				continue
 			}
