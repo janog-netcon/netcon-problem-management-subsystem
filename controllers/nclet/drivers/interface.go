@@ -24,7 +24,7 @@ const (
 type ProblemEnvironmentDriver interface {
 	// Check whether ProblemEnvironment is deployed or not and return ContainerStatus
 	// []ContainerDetailStatus should be nil if ProblemEnvironment is not deployed successfully
-	Check(ctx context.Context, reader client.Client, problemEnvironment netconv1alpha1.ProblemEnvironment) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus)
+	Check(ctx context.Context, reader client.Client, problemEnvironment netconv1alpha1.ProblemEnvironment) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerStatus)
 
 	// Deploy ProblemEnvironment
 	Deploy(ctx context.Context, reader client.Client, problemEnvironment netconv1alpha1.ProblemEnvironment) error
