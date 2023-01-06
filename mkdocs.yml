@@ -8,6 +8,8 @@ theme:
   favicon: icon.png
   font: false
   features:
+  - content.code.copy
+  - content.code.annotate
   - navigation.expand
   - navigation.instant
   - navigation.tracking
