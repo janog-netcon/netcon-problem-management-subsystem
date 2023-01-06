@@ -34,6 +34,7 @@ type HeartbeatAgent struct {
 
 	// workerName is the name of Worker that nclet runs on
 	externalIPAddr string
+	externalPort   uint16
 
 	heartbeatTicker    *time.Ticker
 	statusUpdateTicker *time.Ticker
@@ -42,10 +43,11 @@ type HeartbeatAgent struct {
 	memUsedHistory [MEM_USED_HISTORY_SIZE]float64
 }
 
-func NewHeartbeatAgent(workerName string, externalIPaddr string, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
+func NewHeartbeatAgent(workerName string, externalIPaddr string, externalPort uint16, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
 	return &HeartbeatAgent{
 		workerName:         workerName,
 		externalIPAddr:     externalIPaddr,
+		externalPort:       externalPort,
 		heartbeatTicker:    time.NewTicker(heartbeatInterval),
 		statusUpdateTicker: time.NewTicker(statusUpdateInterval),
 	}
@@ -133,6 +135,7 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 			worker.Status.WorkerInfo = netconv1alpha1.WorkerInfo{
 				Hostname:          hostname,
 				ExternalIPAddress: a.externalIPAddr,
+				ExternalPort:      a.externalPort,
 				CPUUsedPercent:    strconv.FormatFloat(cpuUsed, 'f', -1, 64),
 				MemoryUsedPercent: strconv.FormatFloat(memUsed, 'f', -1, 64),
 			}

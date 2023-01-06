@@ -18,7 +18,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -115,6 +118,15 @@ func main() {
 		setupLog.Error(err, "failed to status update interval")
 	}
 
+	idx := strings.LastIndex(sshAddr, ":")
+	if idx == -1 {
+		setupLog.Error(fmt.Errorf("invalid format"), "failed to parse sshAddr")
+	}
+	sshPort, err := strconv.ParseUint(sshAddr[idx+1:], 10, 16)
+	if err != nil {
+		setupLog.Error(err, "failed to parse sshAddr")
+	}
+
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client:                   mgr.GetClient(),
 		Scheme:                   mgr.GetScheme(),
@@ -133,6 +145,7 @@ func main() {
 	if err = mgr.Add(controllers.NewHeartbeatAgent(
 		workerName,
 		externalIPAddr,
+		uint16(sshPort),
 		heartbeatInterval,
 		statusUpdateInterval,
 	)); err != nil {
