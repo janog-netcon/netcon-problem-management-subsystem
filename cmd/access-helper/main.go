@@ -171,7 +171,7 @@ func main() {
 	cmd.PersistentFlags().StringVarP(&topologyFilePath, "topo", "t", "", "path to the topology file")
 	cmd.PersistentFlags().BoolVar(&isAdmin, "admin", false, "whether access user is admin or not")
 
-	if err := cmd.ExecuteContext(context.TODO()); err != nil {
+	if err := cmd.ExecuteContext(context.Background()); err != nil {
 		os.Exit(1)
 	}
 }

@@ -35,8 +35,6 @@ func (r *ProblemEnvironment) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 //+kubebuilder:webhook:path=/mutate-netcon-janog-gr-jp-v1alpha1-problemenvironment,mutating=true,failurePolicy=fail,sideEffects=None,groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=create;update,versions=v1alpha1,name=mproblemenvironment.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &ProblemEnvironment{}
@@ -44,12 +42,8 @@ var _ webhook.Defaulter = &ProblemEnvironment{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *ProblemEnvironment) Default() {
 	problemenvironmentlog.Info("default", "name", r.Name)
-
-	// TODO(user): fill in your defaulting logic.
-	// TODO(motacapla): Impl defaulting for conditions such as READY, SCHEDULED, ASSIGNED
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-netcon-janog-gr-jp-v1alpha1-problemenvironment,mutating=false,failurePolicy=fail,sideEffects=None,groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=create;update,versions=v1alpha1,name=vproblemenvironment.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &ProblemEnvironment{}
@@ -58,7 +52,6 @@ var _ webhook.Validator = &ProblemEnvironment{}
 func (r *ProblemEnvironment) ValidateCreate() error {
 	problemenvironmentlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
@@ -76,7 +69,6 @@ func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) error {
 		return fmt.Errorf(".spec.containerLabManifest: containerLabManifest can't be updated")
 	}
 
-	// TODO(user): fill in your validation logic upon object update.
 	return nil
 }
 
@@ -84,6 +76,5 @@ func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) error {
 func (r *ProblemEnvironment) ValidateDelete() error {
 	problemenvironmentlog.Info("validate delete", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }

@@ -32,8 +32,6 @@ func (r *Problem) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 //+kubebuilder:webhook:path=/mutate-netcon-janog-gr-jp-v1alpha1-problem,mutating=true,failurePolicy=fail,sideEffects=None,groups=netcon.janog.gr.jp,resources=problems,verbs=create;update,versions=v1alpha1,name=mproblem.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &Problem{}
@@ -41,11 +39,8 @@ var _ webhook.Defaulter = &Problem{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Problem) Default() {
 	problemlog.Info("default", "name", r.Name)
-
-	// TODO(user): fill in your defaulting logic.
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-netcon-janog-gr-jp-v1alpha1-problem,mutating=false,failurePolicy=fail,sideEffects=None,groups=netcon.janog.gr.jp,resources=problems,verbs=create;update,versions=v1alpha1,name=vproblem.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &Problem{}
@@ -54,7 +49,6 @@ var _ webhook.Validator = &Problem{}
 func (r *Problem) ValidateCreate() error {
 	problemlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
@@ -62,7 +56,6 @@ func (r *Problem) ValidateCreate() error {
 func (r *Problem) ValidateUpdate(old runtime.Object) error {
 	problemlog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
 	return nil
 }
 
@@ -70,6 +63,5 @@ func (r *Problem) ValidateUpdate(old runtime.Object) error {
 func (r *Problem) ValidateDelete() error {
 	problemlog.Info("validate delete", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
