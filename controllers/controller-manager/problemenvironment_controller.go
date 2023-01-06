@@ -154,6 +154,10 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 	}
 	arr := make([]WorkerResource, 0, workerLength)
 	for i := 0; i < workerLength; i++ {
+		if workers.Items[i].Spec.DisableSchedule {
+			continue
+		}
+
 		cpuUsedPct, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.CPUUsedPercent, 64)
 		if err != nil {
 			log.Error(err, "failed to parse CPUUsedPercent for worker election")
