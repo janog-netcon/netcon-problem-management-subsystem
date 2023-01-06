@@ -39,6 +39,7 @@ import (
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet/drivers"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/crypto"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -52,6 +53,8 @@ var (
 
 	externalIPAddr string
 	configDir      string
+
+	adminPass string
 
 	heartbeatInterval    string
 	statusUpdateInterval string
@@ -70,6 +73,8 @@ func main() {
 
 	flag.StringVar(&externalIPAddr, "external-ip-address", "127.0.0.1", "The IP address user connect to.")
 	flag.StringVar(&configDir, "config-directory", "/data", "Path ContainerLab files are placed")
+
+	flag.StringVar(&adminPass, "admin-password", "", "The address SSH server binds to.")
 
 	flag.StringVar(&heartbeatInterval, "heartbeat-interval", "3s", "Heartbeat interval")
 	flag.StringVar(&statusUpdateInterval, "status-update-interval", "10s", "Status update interval")
@@ -108,6 +113,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	if adminPass == "" {
+		password, err := crypto.GeneratePassword(64)
+		if err != nil {
+			setupLog.Error(err, "failed to generate password for admin")
+		}
+		adminPass = password
+	}
+
 	heartbeatInterval, err := time.ParseDuration(heartbeatInterval)
 	if err != nil {
 		setupLog.Error(err, "failed to parse heartbeat interval")
@@ -137,7 +150,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(controllers.NewSSHServer(sshAddr)); err != nil {
+	if err = mgr.Add(controllers.NewSSHServer(sshAddr, adminPass)); err != nil {
 		setupLog.Error(err, "unable to create ssh server")
 		os.Exit(1)
 	}
