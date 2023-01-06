@@ -176,7 +176,7 @@ func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.C
 			&problemEnvironment,
 			netconv1alpha1.ProblemEnvironmentConditionAssigned,
 		) != metav1.ConditionTrue {
-			// TODO(proelbtn): Gateway is not found now. So, I bypassed "Assigned" check
+			return false
 		}
 
 		if problemEnvironment.Status.Password != password {
