@@ -20,6 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// WorkerStatus defines the desired state of Worker
+type WorkerSpec struct {
+	DisableSchedule bool `json:"disableSchedule"`
+}
+
 // WorkerStatus defines the observed state of Worker
 type WorkerStatus struct {
 	WorkerInfo WorkerInfo `json:"workerInfo"`
@@ -40,6 +45,8 @@ type WorkerInfo struct {
 type Worker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec WorkerSpec `json:"spec,omitempty"`
 
 	Status WorkerStatus `json:"status,omitempty"`
 }
