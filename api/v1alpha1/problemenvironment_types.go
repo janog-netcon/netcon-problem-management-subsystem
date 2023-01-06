@@ -83,11 +83,10 @@ type ContainerStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName={pe,probenv}
 //+kubebuilder:printcolumn:name=SCHEDULED,type=string,JSONPath=.status.conditions[?(@.type=="Scheduled")].status
-//+kubebuilder:printcolumn:name=WORKER,type=string,JSONPath=.spec.workerName,priority=1
 //+kubebuilder:printcolumn:name=DEPLOYED,type=string,JSONPath=.status.conditions[?(@.type=="Deployed")].status
 //+kubebuilder:printcolumn:name=READY,type=string,JSONPath=.status.conditions[?(@.type=="Ready")].status
 //+kubebuilder:printcolumn:name=ASSIGNED,type=string,JSONPath=.status.conditions[?(@.type=="Assigned")].status
-//+kubebuilder:printcolumn:name=CONTAINERS,type=string,JSONPath=.status.containers.summary,priority=1
+//+kubebuilder:printcolumn:name=WORKER,type=string,JSONPath=.spec.workerName,priority=1
 //+kubebuilder:printcolumn:name=PASSWORD,type=string,JSONPath=.status.password,priority=1
 
 // ProblemEnvironment is the Schema for the problemenvironments API

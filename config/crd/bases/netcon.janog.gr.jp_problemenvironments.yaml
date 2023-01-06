@@ -22,10 +22,6 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Scheduled")].status
       name: SCHEDULED
       type: string
-    - jsonPath: .spec.workerName
-      name: WORKER
-      priority: 1
-      type: string
     - jsonPath: .status.conditions[?(@.type=="Deployed")].status
       name: DEPLOYED
       type: string
@@ -35,8 +31,8 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Assigned")].status
       name: ASSIGNED
       type: string
-    - jsonPath: .status.containers.summary
-      name: CONTAINERS
+    - jsonPath: .spec.workerName
+      name: WORKER
       priority: 1
       type: string
     - jsonPath: .status.password
