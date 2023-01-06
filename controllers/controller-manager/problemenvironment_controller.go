@@ -342,13 +342,12 @@ func (r *ProblemEnvironmentReconciler) checkStatus(
 		return r.markNotReady(ctx, problemEnvironment, ctrl.Result{})
 	}
 
-	containerDetails := problemEnvironment.Status.Containers.Details
-	if len(containerDetails) == 0 {
+	if len(problemEnvironment.Status.Containers) == 0 {
 		return r.markNotReady(ctx, problemEnvironment, ctrl.Result{})
 	}
 
-	for _, containerDetail := range containerDetails {
-		if !containerDetail.Ready {
+	for _, containerStatus := range problemEnvironment.Status.Containers {
+		if !containerStatus.Ready {
 			return r.markNotReady(ctx, problemEnvironment, ctrl.Result{})
 		}
 	}

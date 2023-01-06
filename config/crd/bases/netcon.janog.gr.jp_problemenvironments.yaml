@@ -22,10 +22,6 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Scheduled")].status
       name: SCHEDULED
       type: string
-    - jsonPath: .spec.workerName
-      name: WORKER
-      priority: 1
-      type: string
     - jsonPath: .status.conditions[?(@.type=="Deployed")].status
       name: DEPLOYED
       type: string
@@ -35,8 +31,8 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Assigned")].status
       name: ASSIGNED
       type: string
-    - jsonPath: .status.containers.summary
-      name: CONTAINERS
+    - jsonPath: .spec.workerName
+      name: WORKER
       priority: 1
       type: string
     - jsonPath: .status.password
@@ -175,37 +171,29 @@ spec:
                   type: object
                 type: array
               containers:
-                properties:
-                  details:
-                    items:
-                      properties:
-                        containerID:
-                          type: string
-                        containerName:
-                          type: string
-                        image:
-                          type: string
-                        managementIPAddress:
-                          type: string
-                        name:
-                          type: string
-                        ready:
-                          type: boolean
-                      required:
-                      - containerID
-                      - containerName
-                      - image
-                      - managementIPAddress
-                      - name
-                      - ready
-                      type: object
-                    type: array
-                  summary:
-                    type: string
-                required:
-                - details
-                - summary
-                type: object
+                items:
+                  properties:
+                    containerID:
+                      type: string
+                    containerName:
+                      type: string
+                    image:
+                      type: string
+                    managementIPAddress:
+                      type: string
+                    name:
+                      type: string
+                    ready:
+                      type: boolean
+                  required:
+                  - containerID
+                  - containerName
+                  - image
+                  - managementIPAddress
+                  - name
+                  - ready
+                  type: object
+                type: array
               password:
                 type: string
             type: object

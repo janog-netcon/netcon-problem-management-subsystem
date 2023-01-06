@@ -18,9 +18,7 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -131,25 +129,6 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 	return res, nil
 }
 
-func (r *ProblemEnvironmentReconciler) generateContainersStatusSummary(
-	containerDetailStatuses []netconv1alpha1.ContainerDetailStatus,
-) string {
-	if len(containerDetailStatuses) == 0 {
-		return "None"
-	}
-
-	parts := []string{}
-	for i := range containerDetailStatuses {
-		containerDetailStatus := &containerDetailStatuses[i]
-		parts = append(parts, fmt.Sprintf("%s:%s",
-			containerDetailStatus.Name,
-			containerDetailStatus.ManagementIPAddress,
-		))
-	}
-
-	return strings.Join(parts, ", ")
-}
-
 func (r *ProblemEnvironmentReconciler) cleanup(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
@@ -177,28 +156,21 @@ func (r *ProblemEnvironmentReconciler) cleanup(
 func (r *ProblemEnvironmentReconciler) updateContainerStatus(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
-	containerDetailStatuses []netconv1alpha1.ContainerDetailStatus,
+	containerStatuses []netconv1alpha1.ContainerStatus,
 ) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
 	needToUpdateStatus := false
-	if problemEnvironment.Status.Containers == nil {
-		needToUpdateStatus = true
-	} else if !reflect.DeepEqual(containerDetailStatuses, problemEnvironment.Status.Containers.Details) {
+	if !reflect.DeepEqual(containerStatuses, problemEnvironment.Status.Containers) {
 		needToUpdateStatus = true
 	}
 
 	if needToUpdateStatus {
 		log.V(1).Info("updating container statuses",
 			"oldContainerStatuses", problemEnvironment.Status.Containers,
-			"containerStatuses", containerDetailStatuses,
+			"containerStatuses", containerStatuses,
 		)
-
-		problemEnvironment.Status.Containers = &netconv1alpha1.ContainersStatus{
-			Summary: r.generateContainersStatusSummary(containerDetailStatuses),
-			Details: containerDetailStatuses,
-		}
-
+		problemEnvironment.Status.Containers = containerStatuses
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: StatusRefreshInterval})
 	}
 

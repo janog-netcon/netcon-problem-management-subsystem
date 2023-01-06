@@ -63,19 +63,14 @@ type ConfigMapFileSource struct {
 
 // ProblemEnvironmentStatus defines the observed state of ProblemEnvironment
 type ProblemEnvironmentStatus struct {
-	Containers *ContainersStatus `json:"containers,omitempty" yaml:"containers,omitempty"`
+	Containers []ContainerStatus `json:"containers,omitempty" yaml:"containers,omitempty"`
 
 	Password string `json:"password,omitempty" yaml:"password,omitempty"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty" yaml:"conditions,omitempty"`
 }
 
-type ContainersStatus struct {
-	Summary string                  `json:"summary" yaml:"summary"`
-	Details []ContainerDetailStatus `json:"details" yaml:"details"`
-}
-
-type ContainerDetailStatus struct {
+type ContainerStatus struct {
 	Name                string `json:"name" yaml:"name"`
 	Image               string `json:"image" yaml:"image"`
 	ContainerID         string `json:"containerID" yaml:"containerID"`
@@ -88,11 +83,10 @@ type ContainerDetailStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName={pe,probenv}
 //+kubebuilder:printcolumn:name=SCHEDULED,type=string,JSONPath=.status.conditions[?(@.type=="Scheduled")].status
-//+kubebuilder:printcolumn:name=WORKER,type=string,JSONPath=.spec.workerName,priority=1
 //+kubebuilder:printcolumn:name=DEPLOYED,type=string,JSONPath=.status.conditions[?(@.type=="Deployed")].status
 //+kubebuilder:printcolumn:name=READY,type=string,JSONPath=.status.conditions[?(@.type=="Ready")].status
 //+kubebuilder:printcolumn:name=ASSIGNED,type=string,JSONPath=.status.conditions[?(@.type=="Assigned")].status
-//+kubebuilder:printcolumn:name=CONTAINERS,type=string,JSONPath=.status.containers.summary,priority=1
+//+kubebuilder:printcolumn:name=WORKER,type=string,JSONPath=.spec.workerName,priority=1
 //+kubebuilder:printcolumn:name=PASSWORD,type=string,JSONPath=.status.password,priority=1
 
 // ProblemEnvironment is the Schema for the problemenvironments API
