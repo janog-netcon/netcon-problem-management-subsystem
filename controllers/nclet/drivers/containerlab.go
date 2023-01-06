@@ -235,13 +235,15 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 		}
 
 		ready := false
-		if containerInfo.State.Health == nil {
-			// If containerInfo doesn't have Health, we can consider the container is ready
-			ready = true
-		} else if containerInfo.State.Health.Status == "healthy" {
-			// If Health.Status is "healthy", we can consider the container is ready
-			// ref: https://pkg.go.dev/github.com/docker/docker/api/types#Health
-			ready = true
+		if containerInfo.State.Running {
+			if containerInfo.State.Health == nil {
+				// If containerInfo doesn't have Health, we can consider the container is ready
+				ready = true
+			} else if containerInfo.State.Health.Status == "healthy" {
+				// If Health.Status is "healthy", we can consider the container is ready
+				// ref: https://pkg.go.dev/github.com/docker/docker/api/types#Health
+				ready = true
+			}
 		}
 
 		containerStatus.ContainerName = containerInfo.Name
