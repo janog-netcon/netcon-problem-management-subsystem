@@ -18,10 +18,7 @@ package controllers
 
 import (
 	"context"
-	"crypto/rand"
-	"errors"
 	"fmt"
-	"math/big"
 	"sort"
 	"strconv"
 	"time"
@@ -34,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/crypto"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
 
@@ -50,24 +48,6 @@ const DEFAULT_PASSWORD_LENGTH = 24
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problemenvironments/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=problems,verbs=get;list;watch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers,verbs=get;list;watch
-
-func generatePassword(length int) (string, error) {
-	if length < 0 {
-		return "", errors.New("invalid length")
-	}
-
-	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-	var buf = make([]rune, length)
-	for i := 0; i < length; i++ {
-		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
-		if err != nil {
-			return "", err
-		}
-		buf[i] = chars[idx.Int64()]
-	}
-
-	return string(buf), nil
-}
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -243,7 +223,7 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
 	}
 
-	password, err := generatePassword(DEFAULT_PASSWORD_LENGTH)
+	password, err := crypto.GeneratePassword(DEFAULT_PASSWORD_LENGTH)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to confirm schedule: %w", err)
 	}
