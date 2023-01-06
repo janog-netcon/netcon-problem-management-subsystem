@@ -63,19 +63,14 @@ type ConfigMapFileSource struct {
 
 // ProblemEnvironmentStatus defines the observed state of ProblemEnvironment
 type ProblemEnvironmentStatus struct {
-	Containers *ContainersStatus `json:"containers,omitempty" yaml:"containers,omitempty"`
+	Containers []ContainerStatus `json:"containers,omitempty" yaml:"containers,omitempty"`
 
 	Password string `json:"password,omitempty" yaml:"password,omitempty"`
 
 	Conditions []metav1.Condition `json:"conditions,omitempty" yaml:"conditions,omitempty"`
 }
 
-type ContainersStatus struct {
-	Summary string                  `json:"summary" yaml:"summary"`
-	Details []ContainerDetailStatus `json:"details" yaml:"details"`
-}
-
-type ContainerDetailStatus struct {
+type ContainerStatus struct {
 	Name                string `json:"name" yaml:"name"`
 	Image               string `json:"image" yaml:"image"`
 	ContainerID         string `json:"containerID" yaml:"containerID"`

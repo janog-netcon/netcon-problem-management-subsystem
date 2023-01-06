@@ -190,7 +190,7 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	ctx context.Context,
 	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
-) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus) {
+) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerStatus) {
 	log := log.FromContext(ctx)
 
 	clabClient := containerlab.NewContainerLabClientFor(&problemEnvironment)
@@ -215,12 +215,12 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 	}
 
 	containerPrefix := fmt.Sprintf("clab-%s-", problemEnvironment.Name)
-	containerStatuses := []netconv1alpha1.ContainerDetailStatus{}
+	containerStatuses := []netconv1alpha1.ContainerStatus{}
 	for i := range labData.Containers {
 		containerDetail := &labData.Containers[i]
 
 		name := strings.ReplaceAll(containerDetail.Name, containerPrefix, "")
-		containerStatus := netconv1alpha1.ContainerDetailStatus{
+		containerStatus := netconv1alpha1.ContainerStatus{
 			Name:                name,
 			Image:               containerDetail.Image,
 			ContainerID:         containerDetail.ContainerID,

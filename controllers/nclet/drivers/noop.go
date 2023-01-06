@@ -21,7 +21,7 @@ func (*NoopProblemEnvironmentDriver) Check(
 	ctx context.Context,
 	client client.Client,
 	problemEnvironment netconv1alpha1.ProblemEnvironment,
-) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerDetailStatus) {
+) (ProblemEnvironmentStatus, []netconv1alpha1.ContainerStatus) {
 	return StatusDeployed, nil
 }
 

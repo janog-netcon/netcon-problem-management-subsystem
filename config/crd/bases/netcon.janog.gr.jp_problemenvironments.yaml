@@ -175,37 +175,29 @@ spec:
                   type: object
                 type: array
               containers:
-                properties:
-                  details:
-                    items:
-                      properties:
-                        containerID:
-                          type: string
-                        containerName:
-                          type: string
-                        image:
-                          type: string
-                        managementIPAddress:
-                          type: string
-                        name:
-                          type: string
-                        ready:
-                          type: boolean
-                      required:
-                      - containerID
-                      - containerName
-                      - image
-                      - managementIPAddress
-                      - name
-                      - ready
-                      type: object
-                    type: array
-                  summary:
-                    type: string
-                required:
-                - details
-                - summary
-                type: object
+                items:
+                  properties:
+                    containerID:
+                      type: string
+                    containerName:
+                      type: string
+                    image:
+                      type: string
+                    managementIPAddress:
+                      type: string
+                    name:
+                      type: string
+                    ready:
+                      type: boolean
+                  required:
+                  - containerID
+                  - containerName
+                  - image
+                  - managementIPAddress
+                  - name
+                  - ready
+                  type: object
+                type: array
               password:
                 type: string
             type: object

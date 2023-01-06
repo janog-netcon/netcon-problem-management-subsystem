@@ -28,7 +28,7 @@ func generateTableBaseForProblemEnvironment() *metav1.Table {
 
 func getReadyForProblemEnvironment(problemEnvironment *v1alpha1.ProblemEnvironment) string {
 	var total, ready uint
-	containerStatuses := problemEnvironment.Status.Containers.Details
+	containerStatuses := problemEnvironment.Status.Containers
 	for _, containerStatus := range containerStatuses {
 		total += 1
 		if containerStatus.Ready {
@@ -71,7 +71,7 @@ func getStatusForProblemEnvironment(problemEnvironment *v1alpha1.ProblemEnvironm
 
 func getContainersForProblemEnvironment(problemEnvironment *v1alpha1.ProblemEnvironment) string {
 	containerNames := []string{}
-	containerStatuses := problemEnvironment.Status.Containers.Details
+	containerStatuses := problemEnvironment.Status.Containers
 	for _, containerStatus := range containerStatuses {
 		containerNames = append(containerNames, containerStatus.Name)
 	}
