@@ -61,6 +61,7 @@ func (g *Gateway) Start(ctx context.Context) error {
 	e.Use(middleware.Recover())
 
 	e.GET("/", hello)
+	e.GET("/healthz", healthz)
 	e.GET("/problem/:name", g.GetProblemEnvironmentHandlerFunc(ctx))
 	e.POST("/problem", g.PostProblemEnvironmentHandlerFunc(ctx))
 	e.DELETE("/problem/:name", g.DeleteProblemEnvironmentHandlerFunc(ctx))
@@ -72,6 +73,10 @@ func (g *Gateway) Start(ctx context.Context) error {
 
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Gateway for score server")
+}
+
+func healthz(c echo.Context) error {
+	return c.String(http.StatusOK, "OK")
 }
 
 func (g *Gateway) GetProblemEnvironmentHandlerFunc(ctx context.Context) echo.HandlerFunc {
