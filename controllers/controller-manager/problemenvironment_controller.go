@@ -135,16 +135,10 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 func (r *ProblemEnvironmentReconciler) electWorker(
 	ctx context.Context,
 	workers netconv1alpha1.WorkerList,
-	problemEnvironments netconv1alpha1.ProblemEnvironmentList,
 ) string {
 	log := log.FromContext(ctx)
 
 	workerLength := len(workers.Items)
-	if workerLength == 0 {
-		return ""
-	} else if workerLength < 2 {
-		return workers.Items[0].Name
-	}
 
 	type WorkerResource struct {
 		Name string
@@ -152,7 +146,7 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 		// MemoryUsedPercent         float64
 		SumOfResourcesUsedPercent float64
 	}
-	arr := make([]WorkerResource, 0, workerLength)
+	arr := make([]WorkerResource, 0)
 	for i := 0; i < workerLength; i++ {
 		if workers.Items[i].Spec.DisableSchedule {
 			continue
@@ -171,6 +165,10 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 		sumOfResourcesUsedPercent := cpuUsedPct + memoryUsedPercent
 
 		arr = append(arr, WorkerResource{workers.Items[i].Name, sumOfResourcesUsedPercent})
+	}
+
+	if len(arr) == 0 {
+		return ""
 	}
 	sort.Slice(arr, func(i, j int) bool {
 		return arr[i].SumOfResourcesUsedPercent < arr[j].SumOfResourcesUsedPercent
@@ -199,37 +197,10 @@ func (r *ProblemEnvironmentReconciler) schedule(
 			"WorkersMissing",
 			message,
 		)
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
+		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
 	}
 
-	if len(workers.Items) == 0 {
-		message := "there are no schedulable Workers"
-		log.Info(message)
-		util.SetProblemEnvironmentCondition(
-			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionScheduled,
-			metav1.ConditionFalse,
-			"WorkersNotSchedulable",
-			message,
-		)
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
-	}
-
-	problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
-	if err := r.List(ctx, &problemEnvironments); err != nil {
-		message := "failed to list ProblemEnvironments"
-		log.Error(err, message)
-		util.SetProblemEnvironmentCondition(
-			problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionScheduled,
-			metav1.ConditionFalse,
-			"WorkersNotSchedulable",
-			message,
-		)
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 5 * time.Second})
-	}
-
-	electedWorkerName := r.electWorker(ctx, workers, problemEnvironments)
+	electedWorkerName := r.electWorker(ctx, workers)
 
 	if electedWorkerName != "" {
 		problemEnvironment.Spec.WorkerName = electedWorkerName
@@ -245,7 +216,7 @@ func (r *ProblemEnvironmentReconciler) schedule(
 			reason,
 			message,
 		)
-		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
+		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
 	}
 }
 
