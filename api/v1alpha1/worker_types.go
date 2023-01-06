@@ -27,6 +27,7 @@ type WorkerStatus struct {
 
 type WorkerInfo struct {
 	ExternalIPAddress string `json:"externalIPAddress"`
+	ExternalPort      uint16 `json:"externalPort"`
 	Hostname          string `json:"hostname"`
 	MemoryUsedPercent string `json:"memoryUsedPercent"`
 	CPUUsedPercent    string `json:"cpuUsedPercent"`

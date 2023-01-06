@@ -41,6 +41,8 @@ spec:
                     type: string
                   externalIPAddress:
                     type: string
+                  externalPort:
+                    type: integer
                   hostname:
                     type: string
                   memoryUsedPercent:
@@ -48,6 +50,7 @@ spec:
                 required:
                 - cpuUsedPercent
                 - externalIPAddress
+                - externalPort
                 - hostname
                 - memoryUsedPercent
                 type: object
