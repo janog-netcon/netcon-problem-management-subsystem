@@ -152,7 +152,7 @@ After deploying managers successfully, you can install nclet with these command.
 
 ```bash
 kind get kubeconfig > kubeconfig
-sudo mkdir /data && sudo chmod 0777 ./data
+sudo mkdir -p /data && sudo chmod 0777 /data
 ./scripts/refresh_nclet.sh
 ```
 
