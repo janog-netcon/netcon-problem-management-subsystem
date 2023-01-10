@@ -58,3 +58,11 @@ rules:
   - problems/status
   verbs:
   - get
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - workers
+  verbs:
+  - get
+  - list
+  - watch
