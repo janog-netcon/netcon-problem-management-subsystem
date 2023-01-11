@@ -135,7 +135,7 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 		problemEnvironments := netconv1alpha1.ProblemEnvironmentList{}
 		if err := g.Client.List(ctx, &problemEnvironments, problemNameLabel); err != nil {
 			log.Error(err, "could not list ProblemEnvironments")
-			return err
+			return c.JSONBlob(http.StatusNotFound, nil)
 		}
 
 		selectedItems := []netconv1alpha1.ProblemEnvironment{}
@@ -159,7 +159,7 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 		}
 		if len(selectedItems) == 0 {
 			log.Error(err, "no such applicable problem environment")
-			return c.JSONBlob(http.StatusInternalServerError, nil)
+			return c.JSONBlob(http.StatusNotAcceptable, nil)
 		}
 
 		workerName := selectedItems[0].Spec.WorkerName
@@ -198,12 +198,12 @@ func (g *Gateway) DeleteProblemEnvironmentHandlerFunc(ctx context.Context) echo.
 		problemEnvironment, err := g.GetProblemEnvironment(ctx, problemEnvironmentName)
 		if err != nil {
 			log.Error(err, "failed to get problem environment list")
-			return err
+			return c.JSONBlob(http.StatusNotFound, nil)
 		}
 
 		if err := g.Client.Delete(ctx, &problemEnvironment); err != nil {
 			log.Error(err, "failed to deletet")
-			return err
+			return c.JSONBlob(http.StatusNotFound, nil)
 		}
 
 		return c.JSONBlob(http.StatusOK, nil)
