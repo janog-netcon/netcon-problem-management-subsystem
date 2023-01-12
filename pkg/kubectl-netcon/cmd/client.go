@@ -4,6 +4,7 @@ import (
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/clientset/v1alpha1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 )
 
