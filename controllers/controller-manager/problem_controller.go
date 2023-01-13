@@ -83,11 +83,22 @@ func (r *ProblemReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	assignableProblemEnvironments := 0
-	for _, pe := range problemEnvironments.Items {
-		condition := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionAssigned)
-		if condition != metav1.ConditionTrue {
-			assignableProblemEnvironments = assignableProblemEnvironments + 1
+	for _, problemEnvironment := range problemEnvironments.Items {
+		// problemEnvironment being deleted is not assignable
+		if problemEnvironment.DeletionTimestamp != nil {
+			continue
 		}
+
+		// problemEnvironment already assigned is not assignable
+		if util.GetProblemEnvironmentCondition(
+			&problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionAssigned,
+		) == metav1.ConditionTrue {
+			continue
+		}
+
+		// otherwise problemEnvironment is assignable
+		assignableProblemEnvironments = assignableProblemEnvironments + 1
 	}
 
 	if problem.Spec.AssignableReplicas > assignableProblemEnvironments {
