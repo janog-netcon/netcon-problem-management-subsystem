@@ -29,6 +29,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/docker/docker/client"
+	"github.com/shirou/gopsutil/v3/cpu"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -58,6 +59,8 @@ var (
 
 	heartbeatInterval    string
 	statusUpdateInterval string
+
+	maxWorkers int
 )
 
 func init() {
@@ -78,6 +81,8 @@ func main() {
 
 	flag.StringVar(&heartbeatInterval, "heartbeat-interval", "3s", "Heartbeat interval")
 	flag.StringVar(&statusUpdateInterval, "status-update-interval", "10s", "Status update interval")
+
+	flag.IntVar(&maxWorkers, "max-workers", 0, "Max workers for ProblemEnvironment")
 
 	opts := zap.Options{
 		Development: true,
@@ -140,9 +145,21 @@ func main() {
 		setupLog.Error(err, "failed to parse sshAddr")
 	}
 
+	if maxWorkers == 0 {
+		cores, err := cpu.Counts(true)
+		if err != nil {
+			setupLog.Error(err, "failed to get the number of cpu cores")
+		}
+		workers := cores / 8
+		if workers != 0 {
+			maxWorkers = workers
+		}
+	}
+
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client:                   mgr.GetClient(),
 		Scheme:                   mgr.GetScheme(),
+		MaxConcurrentReconciles:  maxWorkers,
 		WorkerName:               workerName,
 		ProblemEnvironmentDriver: driver,
 	}).SetupWithManager(mgr); err != nil {

@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -41,6 +42,8 @@ const StatusRefreshInterval = 5 * time.Second
 type ProblemEnvironmentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	MaxConcurrentReconciles int
 
 	// WorkerName is the name of worker where nclet places
 	WorkerName string
@@ -230,7 +233,14 @@ func (r *ProblemEnvironmentReconciler) check(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProblemEnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.MaxConcurrentReconciles == 0 {
+		r.MaxConcurrentReconciles = 1
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&netconv1alpha1.ProblemEnvironment{}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: r.MaxConcurrentReconciles,
+		}).
 		Complete(r)
 }
