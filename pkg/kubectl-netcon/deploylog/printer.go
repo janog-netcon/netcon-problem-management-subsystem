@@ -52,7 +52,11 @@ func (p *PrettyDeployLogPrinter) Print(log *DeployLog) error {
 			continue
 		}
 
-		timestamp := line.timestamp.In(p.location).Format(time.RFC3339)
+		timestamp := strings.Repeat(" ", 25)
+		if line.timestamp != nil {
+			timestamp = line.timestamp.In(p.location).Format(time.RFC3339)
+		}
+
 		level := p.formatLogLevel(line.level)
 		message := strings.ReplaceAll(line.message, "\n", "\n"+strings.Repeat(" ", 33))
 
@@ -80,7 +84,5 @@ func (p *PrettyDeployLogPrinter) formatLogLevel(level LogLevel) string {
 	case LogLevelFatal:
 		return color.HiRedString("FATAL")
 	}
-
 	return "     "
-
 }
