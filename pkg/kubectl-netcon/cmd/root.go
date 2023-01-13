@@ -27,6 +27,7 @@ func NewRootCmd() *cobra.Command {
 	globalConfig.configFlags.AddFlags(cmd.PersistentFlags())
 
 	cmd.AddCommand(newProblemEnvironmentCmd())
+	cmd.AddCommand(newWorkerCmd())
 
 	return cmd
 }

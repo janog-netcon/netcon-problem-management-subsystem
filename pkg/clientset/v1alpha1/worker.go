@@ -11,9 +11,12 @@ import (
 )
 
 type WorkerInterface interface {
-	List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.WorkerList, error)
+	Create(ctx context.Context, worker *v1alpha1.Worker, opts metav1.CreateOptions) (*v1alpha1.Worker, error)
+	Update(ctx context.Context, worker *v1alpha1.Worker, opts metav1.UpdateOptions) (*v1alpha1.Worker, error)
+	UpdateStatus(ctx context.Context, worker *v1alpha1.Worker, opts metav1.UpdateOptions) (*v1alpha1.Worker, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1alpha1.Worker, error)
-	Create(ctx context.Context, worker *v1alpha1.Worker) (*v1alpha1.Worker, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.WorkerList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
 
@@ -23,15 +26,53 @@ type workerClient struct {
 
 var _ WorkerInterface = &workerClient{}
 
-func (c *workerClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.WorkerList, error) {
-	result := v1alpha1.WorkerList{}
+func (c *workerClient) Create(ctx context.Context, worker *v1alpha1.Worker, opts metav1.CreateOptions) (*v1alpha1.Worker, error) {
+	result := v1alpha1.Worker{}
 	err := c.restClient.
-		Get().
+		Post().
 		Resource("workers").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(worker).
 		Do(ctx).
 		Into(&result)
 	return &result, err
+}
+
+func (c *workerClient) Update(ctx context.Context, worker *v1alpha1.Worker, opts metav1.UpdateOptions) (*v1alpha1.Worker, error) {
+	result := v1alpha1.Worker{}
+	err := c.restClient.
+		Put().
+		Resource("workers").
+		Name(worker.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(worker).
+		Do(ctx).
+		Into(&result)
+	return &result, err
+}
+
+func (c *workerClient) UpdateStatus(ctx context.Context, worker *v1alpha1.Worker, opts metav1.UpdateOptions) (*v1alpha1.Worker, error) {
+	result := v1alpha1.Worker{}
+	err := c.restClient.
+		Put().
+		Resource("workers").
+		Name(worker.Name).
+		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(worker).
+		Do(ctx).
+		Into(&result)
+	return &result, err
+}
+
+func (c *workerClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+	return c.restClient.
+		Delete().
+		Resource("workers").
+		Name(name).
+		Body(&opts).
+		Do(ctx).
+		Error()
 }
 
 func (c *workerClient) Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1alpha1.Worker, error) {
@@ -46,12 +87,12 @@ func (c *workerClient) Get(ctx context.Context, name string, opts metav1.GetOpti
 	return &result, err
 }
 
-func (c *workerClient) Create(ctx context.Context, worker *v1alpha1.Worker) (*v1alpha1.Worker, error) {
-	result := v1alpha1.Worker{}
+func (c *workerClient) List(ctx context.Context, opts metav1.ListOptions) (*v1alpha1.WorkerList, error) {
+	result := v1alpha1.WorkerList{}
 	err := c.restClient.
-		Post().
+		Get().
 		Resource("workers").
-		Body(worker).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Do(ctx).
 		Into(&result)
 	return &result, err

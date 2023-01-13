@@ -29,9 +29,9 @@ func PrintObject(writer io.Writer, obj runtime.Object, options PrintOptions) err
 	case *v1alpha1.ProblemEnvironmentList:
 		table, err = generateTableForProblemEnvironmentList(obj, generateOptions)
 	case *v1alpha1.Worker:
-		panic(nil)
+		table, err = generateTableForWorker(obj, generateOptions)
 	case *v1alpha1.WorkerList:
-		panic(nil)
+		table, err = generateTableForWorkerList(obj, generateOptions)
 	default:
 		return ErrUnsupporedType
 	}
