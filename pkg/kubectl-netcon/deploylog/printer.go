@@ -73,6 +73,8 @@ func (p *PrettyDeployLogPrinter) formatLogLevel(level LogLevel) string {
 		return color.GreenString(" INFO")
 	case LogLevelWarning:
 		return color.YellowString(" WARN")
+	case LogLevelError:
+		return color.RedString("ERROR")
 	case LogLevelPanic:
 		return color.RedString("PANIC")
 	case LogLevelFatal:

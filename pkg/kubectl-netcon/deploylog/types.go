@@ -18,6 +18,7 @@ const (
 	LogLevelDebug = iota + 1
 	LogLevelInfo
 	LogLevelWarning
+	LogLevelError
 	LogLevelPanic
 	LogLevelFatal
 )

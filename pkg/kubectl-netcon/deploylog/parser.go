@@ -53,6 +53,8 @@ func (p *DeployLogParser) parseLogLevel(level string) (LogLevel, error) {
 		return LogLevelInfo, nil
 	case "warning":
 		return LogLevelWarning, nil
+	case "error":
+		return LogLevelError, nil
 	case "panic":
 		return LogLevelPanic, nil
 	case "fatal":
