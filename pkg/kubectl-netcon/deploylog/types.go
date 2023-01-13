@@ -21,4 +21,5 @@ const (
 	LogLevelError
 	LogLevelPanic
 	LogLevelFatal
+	LogLevelUnknown
 )
