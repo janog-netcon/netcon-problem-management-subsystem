@@ -39,6 +39,10 @@ func getReadyForProblemEnvironment(problemEnvironment *v1alpha1.ProblemEnvironme
 }
 
 func getStatusForProblemEnvironment(problemEnvironment *v1alpha1.ProblemEnvironment) string {
+	if problemEnvironment.DeletionTimestamp != nil {
+		return "Deleting"
+	}
+
 	scheduled := util.GetProblemEnvironmentCondition(
 		problemEnvironment,
 		v1alpha1.ProblemEnvironmentConditionScheduled,
@@ -59,7 +63,7 @@ func getStatusForProblemEnvironment(problemEnvironment *v1alpha1.ProblemEnvironm
 	}
 
 	if !deployed {
-		return "deploying"
+		return "Deploying"
 	}
 
 	if !assigned {
