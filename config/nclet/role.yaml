@@ -59,4 +59,6 @@ rules:
   - list
   - watch
   - patch
+  - create
   - update
+
