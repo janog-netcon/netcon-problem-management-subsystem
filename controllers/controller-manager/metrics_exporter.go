@@ -34,13 +34,6 @@ var (
 			Help: "Number of ready workers",
 		},
 	)
-	workerScheduledProblemEnvironmentsGaugeVec = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "netcon_worker_scheduled_problem_environments",
-			Help: "Number of ProblemEnvironment scheduled to the worker",
-		},
-		[]string{"name"},
-	)
 	schedulableWorkersGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "netcon_schedulable_workers",
@@ -60,6 +53,13 @@ var (
 			Help: "assignable replicas",
 		},
 		[]string{"namespace", "name"},
+	)
+	workerScheduledProblemEnvironmentsGaugeVec = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "netcon_worker_scheduled_problem_environments",
+			Help: "Number of ProblemEnvironment scheduled to the worker",
+		},
+		[]string{"name"},
 	)
 )
 
@@ -92,6 +92,9 @@ func (me *MetricsExporter) Start(ctx context.Context) error {
 		workersGauge,
 		readyWorkersGauge,
 		schedulableWorkersGauge,
+		workerScheduledProblemEnvironmentsGaugeVec,
+		problemReplicasGaugeVec,
+		problemDesiredAssignableReplicasGaugeVec,
 	} {
 		if err := metrics.Registry.Register(collector); err != nil {
 			return err
