@@ -88,6 +88,7 @@ type ContainerStatus struct {
 //+kubebuilder:printcolumn:name=ASSIGNED,type=string,JSONPath=.status.conditions[?(@.type=="Assigned")].status
 //+kubebuilder:printcolumn:name=WORKER,type=string,JSONPath=.spec.workerName,priority=1
 //+kubebuilder:printcolumn:name=PASSWORD,type=string,JSONPath=.status.password,priority=1
+//+kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 
 // ProblemEnvironment is the Schema for the problemenvironments API
 type ProblemEnvironment struct {

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	coordv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -67,13 +68,6 @@ func (a *HeartbeatAgent) InjectClient(c client.Client) error {
 
 // Start implements manager.Runnable
 func (a *HeartbeatAgent) Start(ctx context.Context) error {
-	// TODO: implement the mechanism for heartbeat
-	// There are two forms of heartbeat for Node
-	// 1. Update status field (DONE)
-	// 2. Heartbeat with Lease
-	// Worker also need to implement such heartbeat mechanism
-	// ref: https://kubernetes.io/docs/concepts/architecture/nodes/#heartbeats
-
 	log := log.FromContext(ctx)
 
 	if err := a.initMetricsCollector(ctx); err != nil {
@@ -94,16 +88,52 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 		return err
 	}
 
+	lease := coordv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "netcon",
+			Name:      a.workerName,
+		},
+	}
+
+	if _, err := ctrl.CreateOrUpdate(ctx, a, &lease, func() error {
+		holderIdentity := worker.Name
+		renewTime := metav1.NowMicro()
+		leaseDurationSecond := int32(5)
+
+		lease.Spec.HolderIdentity = &holderIdentity
+		lease.Spec.RenewTime = &renewTime
+		lease.Spec.LeaseDurationSeconds = &leaseDurationSecond
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case <-metricsCollectTicker.C:
 			log.V(1).Info("metrics collector ticker is fired, collect metrics")
 			if err := a.collectMetrics(ctx); err != nil {
-				return fmt.Errorf("failed to collect metrics: %w", err)
+				log.Error(err, "failed to collect metrics")
+				continue
 			}
 		case <-a.heartbeatTicker.C:
 			log.V(1).Info("heartbeat ticker is fired, create Lease for heartbeat")
-			// TODO: implement the mechanism to update Lease for this Worker
+
+			if _, err := ctrl.CreateOrUpdate(ctx, a, &lease, func() error {
+				holderIdentity := worker.Name
+				renewTime := metav1.NowMicro()
+				leaseDurationSecond := int32(5)
+
+				lease.Spec.HolderIdentity = &holderIdentity
+				lease.Spec.RenewTime = &renewTime
+				lease.Spec.LeaseDurationSeconds = &leaseDurationSecond
+
+				return nil
+			}); err != nil {
+				log.Error(err, "failed to update lease")
+				continue
+			}
 		case <-a.statusUpdateTicker.C:
 			log.V(1).Info("statusUpdate ticker is fired, create Worker or update status of Worker")
 

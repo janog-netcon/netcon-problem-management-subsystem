@@ -60,6 +60,7 @@ type ProblemReplicas struct {
 //+kubebuilder:printcolumn:name=ASSIGNABLE,type=integer,JSONPath=.status.replicas.assignable
 //+kubebuilder:printcolumn:name=ASSIGNED,type=integer,JSONPath=.status.replicas.assigned,priority=1
 //+kubebuilder:printcolumn:name=TOTAL,type=integer,JSONPath=.status.replicas.total,priority=1
+//+kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 
 // Problem is the Schema for the problems API
 type Problem struct {

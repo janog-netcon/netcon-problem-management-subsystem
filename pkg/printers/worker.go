@@ -2,6 +2,7 @@ package printers
 
 import (
 	"github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -9,6 +10,7 @@ func generateTableBaseForWorker() *metav1.Table {
 	return &metav1.Table{
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name"},
+			{Name: "Ready", Type: "string"},
 			{Name: "Enabled", Type: "string"},
 			{Name: "Age", Type: "string"},
 			{Name: "CPU", Type: "string", Priority: 1},
@@ -24,6 +26,10 @@ func generateTableRowForWorker(
 	options GenerateOptions,
 ) metav1.TableRow {
 	name := worker.Name
+	ready := util.GetWorkerCondition(
+		worker,
+		v1alpha1.WorkerConditionReady,
+	) == metav1.ConditionTrue
 	enabled := !worker.Spec.DisableSchedule
 	age := translateTimestampSince(worker.CreationTimestamp)
 	cpu := worker.Status.WorkerInfo.CPUUsedPercent
@@ -31,7 +37,7 @@ func generateTableRowForWorker(
 	ipAddress := worker.Status.WorkerInfo.ExternalIPAddress
 	port := worker.Status.WorkerInfo.ExternalPort
 
-	cells := []interface{}{name, enabled, age}
+	cells := []interface{}{name, ready, enabled, age}
 	if options.Wide {
 		cells = append(cells, cpu, memory, ipAddress, port)
 	}

@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -112,6 +113,12 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ProblemEnvironment")
 		os.Exit(1)
 	}
+
+	if err := mgr.Add(controllers.NewWorkerController(3 * time.Second)); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Worker")
+		os.Exit(1)
+	}
+
 	if err = (&netconv1alpha1.Problem{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "Problem")
 		os.Exit(1)
@@ -120,7 +127,6 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ProblemEnvironment")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
