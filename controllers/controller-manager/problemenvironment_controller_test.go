@@ -98,7 +98,7 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			}
 
 			return nil
-		})
+		}).ShouldNot(HaveOccurred())
 	})
 
 	It("should not confirm worker if invalid workerName is specified", func() {
@@ -133,7 +133,7 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			}
 
 			return nil
-		})
+		}).ShouldNot(HaveOccurred())
 	})
 
 	It("should not schedule worker if there is no schedulable workers", func() {
@@ -157,6 +157,12 @@ var _ = Describe("ProblemEnvironment controller", func() {
 
 		err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-001"}, &worker001)
 		Expect(err).NotTo(HaveOccurred())
+		util.SetWorkerCondition(
+			&worker001,
+			netconv1alpha1.WorkerConditionReady,
+			metav1.ConditionTrue,
+			"Test", "test",
+		)
 		worker001.Status.WorkerInfo.CPUUsedPercent = "50.0"
 		worker001.Status.WorkerInfo.MemoryUsedPercent = "90.0"
 		err = k8sClient.Status().Update(ctx, &worker001)
@@ -183,7 +189,7 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			}
 
 			return nil
-		})
+		}).ShouldNot(HaveOccurred())
 	})
 
 	It("should schedule ProblemEnvironment to the worker which uses less resources", func() {
@@ -213,6 +219,12 @@ var _ = Describe("ProblemEnvironment controller", func() {
 
 		err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-001"}, &worker001)
 		Expect(err).NotTo(HaveOccurred())
+		util.SetWorkerCondition(
+			&worker001,
+			netconv1alpha1.WorkerConditionReady,
+			metav1.ConditionTrue,
+			"Test", "test",
+		)
 		worker001.Status.WorkerInfo.CPUUsedPercent = "50.0"
 		worker001.Status.WorkerInfo.MemoryUsedPercent = "90.0"
 		err = k8sClient.Status().Update(ctx, &worker001)
@@ -220,6 +232,12 @@ var _ = Describe("ProblemEnvironment controller", func() {
 
 		err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-002"}, &worker002)
 		Expect(err).NotTo(HaveOccurred())
+		util.SetWorkerCondition(
+			&worker002,
+			netconv1alpha1.WorkerConditionReady,
+			metav1.ConditionTrue,
+			"Test", "test",
+		)
 		worker002.Status.WorkerInfo.CPUUsedPercent = "10.0"
 		worker002.Status.WorkerInfo.MemoryUsedPercent = "30.0"
 		err = k8sClient.Status().Update(ctx, &worker002)
@@ -250,7 +268,7 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			}
 
 			return nil
-		})
+		}).ShouldNot(HaveOccurred())
 	})
 
 	It("should not schedule ProblemEnvironment to the worker which is disabled", func() {
@@ -281,6 +299,12 @@ var _ = Describe("ProblemEnvironment controller", func() {
 
 		err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-002"}, &worker002)
 		Expect(err).NotTo(HaveOccurred())
+		util.SetWorkerCondition(
+			&worker002,
+			netconv1alpha1.WorkerConditionReady,
+			metav1.ConditionTrue,
+			"Test", "test",
+		)
 		worker002.Status.WorkerInfo.CPUUsedPercent = "50.0"
 		worker002.Status.WorkerInfo.MemoryUsedPercent = "90.0"
 		err = k8sClient.Status().Update(ctx, &worker002)
@@ -288,6 +312,12 @@ var _ = Describe("ProblemEnvironment controller", func() {
 
 		err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-003"}, &worker003)
 		Expect(err).NotTo(HaveOccurred())
+		util.SetWorkerCondition(
+			&worker003,
+			netconv1alpha1.WorkerConditionReady,
+			metav1.ConditionTrue,
+			"Test", "test",
+		)
 		worker003.Status.WorkerInfo.CPUUsedPercent = "10.0"
 		worker003.Status.WorkerInfo.MemoryUsedPercent = "30.0"
 		err = k8sClient.Status().Update(ctx, &worker003)
@@ -318,7 +348,7 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			}
 
 			return nil
-		})
+		}).ShouldNot(HaveOccurred())
 	})
 
 	It("should reflect container status to condition Ready ", func() {
@@ -341,6 +371,12 @@ var _ = Describe("ProblemEnvironment controller", func() {
 
 		err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-001"}, &worker001)
 		Expect(err).NotTo(HaveOccurred())
+		util.SetWorkerCondition(
+			&worker001,
+			netconv1alpha1.WorkerConditionReady,
+			metav1.ConditionTrue,
+			"Test", "test",
+		)
 		worker001.Status.WorkerInfo.CPUUsedPercent = "10.0"
 		worker001.Status.WorkerInfo.MemoryUsedPercent = "30.0"
 		err = k8sClient.Status().Update(ctx, &worker001)
@@ -371,7 +407,7 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			}
 
 			return nil
-		})
+		}).ShouldNot(HaveOccurred())
 
 		err = k8sClient.Get(ctx, types.NamespacedName{
 			Namespace: namespace,
@@ -408,7 +444,7 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			}
 
 			return nil
-		})
+		}).ShouldNot(HaveOccurred())
 
 		err = k8sClient.Get(ctx, types.NamespacedName{
 			Namespace: namespace,
@@ -445,6 +481,6 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			}
 
 			return nil
-		})
+		}).ShouldNot(HaveOccurred())
 	})
 })
