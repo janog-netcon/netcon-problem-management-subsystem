@@ -105,3 +105,22 @@ jobs:
             asia.gcr.io/networkcontest/netcon-pms-nclet:commit-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+  
+  build-kubectl-netcon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+          cache: true
+      - name: Install dependencies
+        run: go mod download
+      - name: Build
+        run: make kubectl-netcon-build
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: kubectl-netcon
+          path: ./kubectl-netcon
