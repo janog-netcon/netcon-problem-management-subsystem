@@ -79,7 +79,7 @@ func main() {
 
 	flag.StringVar(&adminPass, "admin-password", "", "The address SSH server binds to.")
 
-	flag.StringVar(&heartbeatInterval, "heartbeat-interval", "3s", "Heartbeat interval")
+	flag.StringVar(&heartbeatInterval, "heartbeat-interval", "1s", "Heartbeat interval")
 	flag.StringVar(&statusUpdateInterval, "status-update-interval", "10s", "Status update interval")
 
 	flag.IntVar(&maxWorkers, "max-workers", 0, "Max workers for ProblemEnvironment")
