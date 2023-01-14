@@ -119,6 +119,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := mgr.Add(controllers.NewWorkerMetricsExporter(3 * time.Second)); err != nil {
+		setupLog.Error(err, "unable to create metrics exporter", "target", "Worker")
+		os.Exit(1)
+	}
+
 	if err = (&netconv1alpha1.Problem{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "Problem")
 		os.Exit(1)
