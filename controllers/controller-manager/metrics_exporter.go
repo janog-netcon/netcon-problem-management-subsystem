@@ -34,6 +34,13 @@ var (
 			Help: "Number of ready workers",
 		},
 	)
+	workerScheduledProblemEnvironmentsGaugeVec = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "netcon_worker_scheduled_problem_environments",
+			Help: "Number of ProblemEnvironment scheduled to the worker",
+		},
+		[]string{"name"},
+	)
 	schedulableWorkersGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "netcon_schedulable_workers",
@@ -181,6 +188,32 @@ func (wc *MetricsExporter) export(
 				"name":      problem.Name,
 			}).
 			Set(float64(problem.Spec.AssignableReplicas))
+	}
+
+	workerCounterMap := map[string]int{}
+	for _, problemEnvironment := range problemEnvironmentList.Items {
+		workerName := ""
+		if util.GetProblemEnvironmentCondition(
+			&problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionScheduled,
+		) == metav1.ConditionTrue {
+			workerName = problemEnvironment.Spec.WorkerName
+		}
+
+		if _, ok := workerCounterMap[workerName]; !ok {
+			workerCounterMap[workerName] = 1
+			continue
+		}
+
+		workerCounterMap[workerName] += 1
+	}
+
+	for key, value := range workerCounterMap {
+		workerScheduledProblemEnvironmentsGaugeVec.
+			With(prometheus.Labels{
+				"name": key,
+			}).
+			Set(float64(value))
 	}
 
 	return nil
