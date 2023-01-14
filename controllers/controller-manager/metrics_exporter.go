@@ -185,6 +185,14 @@ func (wc *MetricsExporter) export(
 			}).
 			Set(float64(problem.Status.Replicas.Assigned))
 
+		problemReplicasGaugeVec.
+			With(prometheus.Labels{
+				"namespace": problem.Namespace,
+				"name":      problem.Name,
+				"status":    "total",
+			}).
+			Set(float64(problem.Status.Replicas.Assigned))
+
 		problemDesiredAssignableReplicasGaugeVec.
 			With(prometheus.Labels{
 				"namespace": problem.Namespace,
