@@ -119,12 +119,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := mgr.Add(controllers.NewProblemMetricsExporter(3 * time.Second)); err != nil {
+	if err := mgr.Add(controllers.NewMetricsExporter(3 * time.Second)); err != nil {
 		setupLog.Error(err, "unable to create metrics exporter", "target", "Problem")
-		os.Exit(1)
-	}
-	if err := mgr.Add(controllers.NewWorkerMetricsExporter(3 * time.Second)); err != nil {
-		setupLog.Error(err, "unable to create metrics exporter", "target", "Worker")
 		os.Exit(1)
 	}
 
