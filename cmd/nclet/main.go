@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -111,6 +112,10 @@ func main() {
 	}
 
 	driver := drivers.NewContainerLabProblemEnvironmentDriver(configDir, dockerClient)
+	if err := driver.Setup(context.Background()); err != nil {
+		setupLog.Error(err, "failed to set up container lab problem environment driver")
+		os.Exit(1)
+	}
 
 	workerName, err := os.Hostname()
 	if err != nil {

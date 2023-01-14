@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	dockerTypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/network"
 	dockerClient "github.com/docker/docker/client"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -114,6 +116,9 @@ func (d *ContainerLabProblemEnvironmentDriver) getTopologyFileFor(
 	// To avoid name conflict, override Prefix and Name
 	topologyConfig.Prefix = nil
 	topologyConfig.Name = problemEnvironment.Name
+	topologyConfig.Mgmt = &containerlab.MgmtNet{
+		Network: "nc-mgmt",
+	}
 
 	// rewrite filepath forcibly to fill the directory gap
 	// TODO: make base directory configurable
@@ -328,4 +333,42 @@ func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 	}
 
 	return nil
+}
+
+func (d *ContainerLabProblemEnvironmentDriver) ensureManagementNetwork(ctx context.Context) error {
+	name := "nc-mgmt"
+
+	_, err := d.dockerClient.NetworkInspect(ctx, name, dockerTypes.NetworkInspectOptions{})
+
+	// Management Network is already created
+	if err == nil {
+		return nil
+	}
+
+	// Unexpected error occured
+	if err != nil && !dockerClient.IsErrNotFound(err) {
+		return err
+	}
+
+	options := dockerTypes.NetworkCreate{
+		CheckDuplicate: true,
+		Driver:         "bridge",
+		IPAM: &network.IPAM{
+			Driver: "default",
+			Config: []network.IPAMConfig{
+				{
+					Subnet:  "100.64.0.0/10",
+					Gateway: "100.64.0.1",
+				},
+			},
+		},
+		Options: map[string]string{},
+	}
+
+	_, err = d.dockerClient.NetworkCreate(ctx, name, options)
+	return err
+}
+
+func (d *ContainerLabProblemEnvironmentDriver) Setup(ctx context.Context) error {
+	return d.ensureManagementNetwork(ctx)
 }
