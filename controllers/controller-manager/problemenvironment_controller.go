@@ -128,6 +128,13 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 	}
 	arr := make([]WorkerResource, 0)
 	for i := 0; i < workerLength; i++ {
+		if util.GetWorkerCondition(
+			&workers.Items[i],
+			netconv1alpha1.WorkerConditionReady,
+		) != metav1.ConditionTrue {
+			continue
+		}
+
 		if workers.Items[i].Spec.DisableSchedule {
 			continue
 		}
