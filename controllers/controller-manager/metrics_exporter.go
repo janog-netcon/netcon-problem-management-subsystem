@@ -191,7 +191,7 @@ func (wc *MetricsExporter) export(
 				"name":      problem.Name,
 				"status":    "total",
 			}).
-			Set(float64(problem.Status.Replicas.Assigned))
+			Set(float64(problem.Status.Replicas.Total))
 
 		problemDesiredAssignableReplicasGaugeVec.
 			With(prometheus.Labels{
