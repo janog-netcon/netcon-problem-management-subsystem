@@ -33,6 +33,10 @@ func NewWorkerController(
 	}
 }
 
+//+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers,verbs=get;list;watch
+//+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch
+
 // InjectClient implements inject.Client
 func (wc *WorkerController) InjectClient(c client.Client) error {
 	wc.Client = c

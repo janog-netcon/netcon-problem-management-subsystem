@@ -6,6 +6,14 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - netcon.janog.gr.jp
   resources:
   - problemenvironments
@@ -51,3 +59,11 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - netcon.janog.gr.jp
+  resources:
+  - workers/status
+  verbs:
+  - get
+  - patch
+  - update
