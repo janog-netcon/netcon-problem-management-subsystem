@@ -157,11 +157,13 @@ func main() {
 			if len(args) == 1 { // if nodeName is specified
 				accessNode(ctx, client, config, args[0], isAdmin)
 			} else {
-				nodeName := askUserForNode(config, isAdmin)
-				if nodeName == "" {
-					return nil
+				for {
+					nodeName := askUserForNode(config, isAdmin)
+					if nodeName == "" {
+						return nil
+					}
+					accessNode(ctx, client, config, nodeName, isAdmin)
 				}
-				accessNode(ctx, client, config, nodeName, isAdmin)
 			}
 
 			return nil
