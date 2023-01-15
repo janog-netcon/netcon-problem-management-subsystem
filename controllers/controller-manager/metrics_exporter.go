@@ -160,6 +160,8 @@ func (wc *MetricsExporter) export(
 	readyWorkersGauge.Set(ready)
 	schedulableWorkersGauge.Set(schedulable)
 
+	problemReplicasGaugeVec.Reset()
+	problemDesiredAssignableReplicasGaugeVec.Reset()
 	for _, problem := range problemList.Items {
 		problemReplicasGaugeVec.
 			With(prometheus.Labels{
