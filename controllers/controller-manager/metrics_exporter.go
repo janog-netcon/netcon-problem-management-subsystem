@@ -219,6 +219,9 @@ func (wc *MetricsExporter) export(
 		workerCounterMap[workerName] += 1
 	}
 
+	// Before writing current metrics, we should reset previous metrics
+	// for the case if Workers are deleted
+	workerScheduledProblemEnvironmentsGaugeVec.Reset()
 	for key, value := range workerCounterMap {
 		workerScheduledProblemEnvironmentsGaugeVec.
 			With(prometheus.Labels{
