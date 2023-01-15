@@ -128,12 +128,10 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 
 	workerCounterMap := map[string]int{}
 	for _, problemEnvironment := range problemEnvironmentList.Items {
-		workerName := ""
-		if util.GetProblemEnvironmentCondition(
-			&problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionScheduled,
-		) == metav1.ConditionTrue {
-			workerName = problemEnvironment.Spec.WorkerName
+		// We don't need to check Scheduled here because it's already scheduled by controller-manager
+		workerName := problemEnvironment.Spec.WorkerName
+		if workerName == "" {
+			continue
 		}
 
 		if _, ok := workerCounterMap[workerName]; !ok {
