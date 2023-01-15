@@ -120,11 +120,35 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 
 	workerLength := len(workers.Items)
 
+	problemEnvironmentList := netconv1alpha1.ProblemEnvironmentList{}
+	if err := r.List(ctx, &problemEnvironmentList); err != nil {
+		log.Info("failed to ")
+		return ""
+	}
+
+	workerCounterMap := map[string]int{}
+	for _, problemEnvironment := range problemEnvironmentList.Items {
+		workerName := ""
+		if util.GetProblemEnvironmentCondition(
+			&problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionScheduled,
+		) == metav1.ConditionTrue {
+			workerName = problemEnvironment.Spec.WorkerName
+		}
+
+		if _, ok := workerCounterMap[workerName]; !ok {
+			workerCounterMap[workerName] = 1
+			continue
+		}
+
+		workerCounterMap[workerName] += 1
+	}
+
 	type WorkerResource struct {
-		Name string
-		// CPUUsedPercent            float64
-		// MemoryUsedPercent         float64
-		SumOfResourcesUsedPercent float64
+		Name              string
+		Count             int
+		CPUUsedPercent    float64
+		MemoryUsedPercent float64
 	}
 	arr := make([]WorkerResource, 0)
 	for i := 0; i < workerLength; i++ {
@@ -139,26 +163,42 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 			continue
 		}
 
-		cpuUsedPct, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.CPUUsedPercent, 64)
+		count, ok := workerCounterMap[workers.Items[i].Name]
+		if !ok {
+			count = 0
+		}
+
+		cpuUsedPercent, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.CPUUsedPercent, 64)
 		if err != nil {
 			log.Error(err, "failed to parse CPUUsedPercent for worker election")
-			cpuUsedPct = MAX_USED_PERCENT
+			cpuUsedPercent = MAX_USED_PERCENT
 		}
+
 		memoryUsedPercent, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.MemoryUsedPercent, 64)
 		if err != nil {
 			log.Error(err, "failed to parse MemoryUsedPercent for worker election")
 			memoryUsedPercent = MAX_USED_PERCENT
 		}
-		sumOfResourcesUsedPercent := cpuUsedPct + memoryUsedPercent
 
-		arr = append(arr, WorkerResource{workers.Items[i].Name, sumOfResourcesUsedPercent})
+		arr = append(arr, WorkerResource{
+			Name:              workers.Items[i].Name,
+			Count:             count,
+			CPUUsedPercent:    cpuUsedPercent,
+			MemoryUsedPercent: memoryUsedPercent,
+		})
 	}
 
 	if len(arr) == 0 {
 		return ""
 	}
 	sort.Slice(arr, func(i, j int) bool {
-		return arr[i].SumOfResourcesUsedPercent < arr[j].SumOfResourcesUsedPercent
+		if arr[i].Count != arr[j].Count {
+			return arr[i].Count < arr[j].Count
+		}
+
+		scoreI := arr[i].CPUUsedPercent + 2*arr[i].MemoryUsedPercent
+		scoreJ := arr[j].CPUUsedPercent + 2*arr[j].MemoryUsedPercent
+		return scoreI < scoreJ
 	})
 
 	log.Info("electWorker : " + arr[0].Name)
