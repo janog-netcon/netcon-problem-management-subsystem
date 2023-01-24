@@ -164,6 +164,7 @@ func main() {
 	if err = (&controllers.ProblemEnvironmentReconciler{
 		Client:                   mgr.GetClient(),
 		Scheme:                   mgr.GetScheme(),
+		Recorder:                 mgr.GetEventRecorderFor("problemenvironment-controller"),
 		MaxConcurrentReconciles:  maxWorkers,
 		WorkerName:               workerName,
 		ProblemEnvironmentDriver: driver,

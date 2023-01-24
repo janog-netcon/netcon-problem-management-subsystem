@@ -76,7 +76,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(&controllers.Gateway{}); err != nil {
+	if err = mgr.Add(&controllers.Gateway{
+		Recorder: mgr.GetEventRecorderFor("gateway"),
+	}); err != nil {
 		setupLog.Error(err, "unable to create ssh server")
 		os.Exit(1)
 	}
