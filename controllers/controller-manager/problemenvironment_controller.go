@@ -324,6 +324,14 @@ func (r *ProblemEnvironmentReconciler) markNotReady(
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 	res ctrl.Result,
 ) (ctrl.Result, error) {
+	// Suppress unneeded status updates
+	if util.GetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+	) == metav1.ConditionFalse {
+		return ctrl.Result{}, nil
+	}
+
 	r.Recorder.Eventf(
 		problemEnvironment,
 		corev1.EventTypeWarning,
@@ -345,6 +353,14 @@ func (r *ProblemEnvironmentReconciler) markReady(
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 	res ctrl.Result,
 ) (ctrl.Result, error) {
+	// Suppress unneeded status updates
+	if util.GetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+	) == metav1.ConditionTrue {
+		return ctrl.Result{}, nil
+	}
+
 	r.Recorder.Eventf(
 		problemEnvironment,
 		corev1.EventTypeNormal,
