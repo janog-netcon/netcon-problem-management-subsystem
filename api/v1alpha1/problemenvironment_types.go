@@ -41,6 +41,14 @@ const (
 	ProblemEnvironmentConditionAssigned ProblemEnvironmentConditionType = "Assigned"
 )
 
+const (
+	ProblemEnvironmentEventDeploying string = "Deploying"
+	ProblemEnvironmentEventDeployed  string = "Deployed"
+	ProblemEnvironmentEventAssigned  string = "Assigned"
+	ProblemEnvironmentEventReady     string = "Ready"
+	ProblemEnvironmentEventNotReady  string = "NotReady"
+)
+
 // ProblemEnvironmentSpec defines the desired state of ProblemEnvironment
 type ProblemEnvironmentSpec struct {
 	// TopologyFile will be placed as `topology.yml`

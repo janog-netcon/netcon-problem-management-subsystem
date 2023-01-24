@@ -21,8 +21,10 @@ import (
 	"reflect"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -41,7 +43,8 @@ const StatusRefreshInterval = 5 * time.Second
 // ProblemEnvironmentReconciler reconciles a ProblemEnvironment object
 type ProblemEnvironmentReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 
 	MaxConcurrentReconciles int
 
@@ -190,8 +193,24 @@ func (r *ProblemEnvironmentReconciler) deploy(
 
 	switch status {
 	case drivers.StatusInit:
+		r.Recorder.Eventf(
+			problemEnvironment,
+			corev1.EventTypeNormal,
+			netconv1alpha1.ProblemEnvironmentEventDeploying,
+			"Starting to deploy ProblemEnvironment on %s",
+			r.WorkerName,
+		)
+		start := time.Now()
 		r.ProblemEnvironmentDriver.Deploy(ctx, r.Client, *problemEnvironment)
-
+		elapsed := time.Since(start)
+		r.Recorder.Eventf(
+			problemEnvironment,
+			corev1.EventTypeNormal,
+			netconv1alpha1.ProblemEnvironmentEventDeployed,
+			"Deployed ProblemEnvironment in %s",
+			r.WorkerName,
+			elapsed.String(),
+		)
 		reason := "Deployed"
 		message := "ProblemEnvironment is deployed"
 		log.Info(message)
