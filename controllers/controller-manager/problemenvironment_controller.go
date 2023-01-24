@@ -348,7 +348,7 @@ func (r *ProblemEnvironmentReconciler) markReady(
 	r.Recorder.Eventf(
 		problemEnvironment,
 		corev1.EventTypeNormal,
-		netconv1alpha1.ProblemEnvironmentEventNotReady,
+		netconv1alpha1.ProblemEnvironmentEventReady,
 		"All containers are ready now",
 	)
 
