@@ -115,7 +115,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := mgr.Add(controllers.NewWorkerController(3 * time.Second)); err != nil {
+	if err := mgr.Add(controllers.NewWorkerController(
+		3*time.Second,
+		mgr.GetEventRecorderFor("worker-controller"),
+	)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Worker")
 		os.Exit(1)
 	}
