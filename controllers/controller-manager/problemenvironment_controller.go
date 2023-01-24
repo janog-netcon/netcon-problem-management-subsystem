@@ -279,7 +279,7 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 	r.Recorder.Eventf(
 		problemEnvironment,
 		corev1.EventTypeNormal,
-		netconv1alpha1.ProblemEnvironmentEventReady,
+		netconv1alpha1.ProblemEnvironmentEventScheduled,
 		"ProblemEnvironment was scheduled on %s",
 		problemEnvironment.Spec.WorkerName,
 	)
