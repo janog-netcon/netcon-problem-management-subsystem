@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -23,6 +25,7 @@ import (
 
 type Gateway struct {
 	client.Client
+	Recorder record.EventRecorder
 }
 
 type ProblemEnvironmentItem struct {
@@ -144,6 +147,13 @@ func (g *Gateway) PostProblemEnvironmentHandlerFunc(ctx context.Context) echo.Ha
 			readyCondition := util.GetProblemEnvironmentCondition(&pe, netconv1alpha1.ProblemEnvironmentConditionReady)
 			if pe.Labels["problemName"] == problemName && assignedCondition == metav1.ConditionFalse && readyCondition == metav1.ConditionTrue {
 				selectedItems = append(selectedItems, pe)
+
+				g.Recorder.Event(
+					&pe,
+					corev1.EventTypeNormal,
+					netconv1alpha1.ProblemEnvironmentEventAssigned,
+					"ProblemEnvironment assigned",
+				)
 
 				message := "Assigned ProblemEnvironment " + pe.Name
 				util.SetProblemEnvironmentCondition(

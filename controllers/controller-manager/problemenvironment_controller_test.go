@@ -38,8 +38,9 @@ var _ = Describe("ProblemEnvironment controller", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		err = (&ProblemEnvironmentReconciler{
-			Client: k8sClient,
-			Scheme: scheme.Scheme,
+			Client:   k8sClient,
+			Scheme:   scheme.Scheme,
+			Recorder: mgr.GetEventRecorderFor("problemenvironment-controller"),
 		}).SetupWithManager(mgr)
 		Expect(err).NotTo(HaveOccurred())
 

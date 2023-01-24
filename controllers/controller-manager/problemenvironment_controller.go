@@ -23,9 +23,11 @@ import (
 	"strconv"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,7 +40,8 @@ import (
 // ProblemEnvironmentReconciler reconciles a ProblemEnvironment object
 type ProblemEnvironmentReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 const MAX_USED_PERCENT float64 = 100.0
@@ -302,7 +305,7 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 	return r.updateStatus(ctx, problemEnvironment, ctrl.Result{})
 }
 
-func (r *ProblemEnvironmentReconciler) markReady(
+func (r *ProblemEnvironmentReconciler) markNotReadyInit(
 	ctx context.Context,
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 	res ctrl.Result,
@@ -310,8 +313,8 @@ func (r *ProblemEnvironmentReconciler) markReady(
 	util.SetProblemEnvironmentCondition(
 		problemEnvironment,
 		netconv1alpha1.ProblemEnvironmentConditionReady,
-		metav1.ConditionTrue,
-		"Ready", "ProblemEnvironment is ready",
+		metav1.ConditionFalse,
+		"NotReady", "nclet haven't checked yet",
 	)
 	return r.updateStatus(ctx, problemEnvironment, res)
 }
@@ -321,11 +324,55 @@ func (r *ProblemEnvironmentReconciler) markNotReady(
 	problemEnvironment *netconv1alpha1.ProblemEnvironment,
 	res ctrl.Result,
 ) (ctrl.Result, error) {
+	// Suppress unneeded status updates
+	if util.GetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+	) == metav1.ConditionFalse {
+		return ctrl.Result{}, nil
+	}
+
+	r.Recorder.Eventf(
+		problemEnvironment,
+		corev1.EventTypeWarning,
+		netconv1alpha1.ProblemEnvironmentEventNotReady,
+		"Some containers went down",
+	)
+
 	util.SetProblemEnvironmentCondition(
 		problemEnvironment,
 		netconv1alpha1.ProblemEnvironmentConditionReady,
 		metav1.ConditionFalse,
 		"NotReady", "ProblemEnvironment is not ready",
+	)
+	return r.updateStatus(ctx, problemEnvironment, res)
+}
+
+func (r *ProblemEnvironmentReconciler) markReady(
+	ctx context.Context,
+	problemEnvironment *netconv1alpha1.ProblemEnvironment,
+	res ctrl.Result,
+) (ctrl.Result, error) {
+	// Suppress unneeded status updates
+	if util.GetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+	) == metav1.ConditionTrue {
+		return ctrl.Result{}, nil
+	}
+
+	r.Recorder.Eventf(
+		problemEnvironment,
+		corev1.EventTypeNormal,
+		netconv1alpha1.ProblemEnvironmentEventReady,
+		"All containers are ready now",
+	)
+
+	util.SetProblemEnvironmentCondition(
+		problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionReady,
+		metav1.ConditionTrue,
+		"Ready", "ProblemEnvironment is ready",
 	)
 	return r.updateStatus(ctx, problemEnvironment, res)
 }
@@ -339,7 +386,7 @@ func (r *ProblemEnvironmentReconciler) checkStatus(
 	log.V(1).Info("checking status")
 
 	if problemEnvironment.Status.Containers == nil {
-		return r.markNotReady(ctx, problemEnvironment, ctrl.Result{})
+		return r.markNotReadyInit(ctx, problemEnvironment, ctrl.Result{})
 	}
 
 	if len(problemEnvironment.Status.Containers) == 0 {

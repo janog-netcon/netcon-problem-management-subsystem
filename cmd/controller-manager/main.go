@@ -107,14 +107,18 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controllers.ProblemEnvironmentReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("problemenvironment-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProblemEnvironment")
 		os.Exit(1)
 	}
 
-	if err := mgr.Add(controllers.NewWorkerController(3 * time.Second)); err != nil {
+	if err := mgr.Add(controllers.NewWorkerController(
+		3*time.Second,
+		mgr.GetEventRecorderFor("worker-controller"),
+	)); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Worker")
 		os.Exit(1)
 	}
