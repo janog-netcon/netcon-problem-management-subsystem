@@ -276,6 +276,14 @@ func (r *ProblemEnvironmentReconciler) confirmSchedule(
 		return ctrl.Result{}, fmt.Errorf("failed to confirm schedule: %w", err)
 	}
 
+	r.Recorder.Eventf(
+		problemEnvironment,
+		corev1.EventTypeNormal,
+		netconv1alpha1.ProblemEnvironmentEventReady,
+		"ProblemEnvironment was scheduled on %s",
+		problemEnvironment.Spec.WorkerName,
+	)
+
 	log.Info("confirmed", "workerName", problemEnvironment.Spec.WorkerName)
 	util.SetProblemEnvironmentCondition(
 		problemEnvironment,
@@ -332,7 +340,7 @@ func (r *ProblemEnvironmentReconciler) markNotReady(
 		return ctrl.Result{}, nil
 	}
 
-	r.Recorder.Eventf(
+	r.Recorder.Event(
 		problemEnvironment,
 		corev1.EventTypeWarning,
 		netconv1alpha1.ProblemEnvironmentEventNotReady,
@@ -361,7 +369,7 @@ func (r *ProblemEnvironmentReconciler) markReady(
 		return ctrl.Result{}, nil
 	}
 
-	r.Recorder.Eventf(
+	r.Recorder.Event(
 		problemEnvironment,
 		corev1.EventTypeNormal,
 		netconv1alpha1.ProblemEnvironmentEventReady,

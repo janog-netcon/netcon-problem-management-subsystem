@@ -42,6 +42,7 @@ const (
 )
 
 const (
+	ProblemEnvironmentEventScheduled string = "Scheduled"
 	ProblemEnvironmentEventDeploying string = "Deploying"
 	ProblemEnvironmentEventDeployed  string = "Deployed"
 	ProblemEnvironmentEventAssigned  string = "Assigned"
