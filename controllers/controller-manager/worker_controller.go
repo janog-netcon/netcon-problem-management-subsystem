@@ -8,8 +8,10 @@ import (
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 	"go.uber.org/multierr"
 	coordv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -18,6 +20,7 @@ import (
 
 type WorkerController struct {
 	client.Client
+	recorder record.EventRecorder
 
 	workerMonitorPeriod time.Duration
 }
@@ -27,9 +30,11 @@ var _ manager.Runnable = &WorkerController{}
 
 func NewWorkerController(
 	workerMonitorPeriod time.Duration,
+	recorder record.EventRecorder,
 ) *WorkerController {
 	return &WorkerController{
 		workerMonitorPeriod: workerMonitorPeriod,
+		recorder:            recorder,
 	}
 }
 
@@ -102,6 +107,12 @@ func (wc *WorkerController) monitorWorkerHealth(ctx context.Context) error {
 		)
 
 		if current == metav1.ConditionTrue && !ready {
+			wc.recorder.Event(
+				&worker,
+				corev1.EventTypeNormal,
+				netconv1alpha1.WorkerEventNotReady,
+				"Worker went down",
+			)
 			util.SetWorkerCondition(
 				&worker,
 				netconv1alpha1.WorkerConditionReady,
@@ -110,6 +121,12 @@ func (wc *WorkerController) monitorWorkerHealth(ctx context.Context) error {
 				"failed to check health",
 			)
 		} else if current != metav1.ConditionTrue && ready {
+			wc.recorder.Event(
+				&worker,
+				corev1.EventTypeNormal,
+				netconv1alpha1.WorkerEventReady,
+				"Worker is ready",
+			)
 			util.SetWorkerCondition(
 				&worker,
 				netconv1alpha1.WorkerConditionReady,

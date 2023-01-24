@@ -24,6 +24,11 @@ type WorkerConditionType string
 
 const WorkerConditionReady WorkerConditionType = "Ready"
 
+const (
+	WorkerEventReady    string = "Ready"
+	WorkerEventNotReady string = "NotReady"
+)
+
 // WorkerStatus defines the desired state of Worker
 type WorkerSpec struct {
 	DisableSchedule bool `json:"disableSchedule"`
