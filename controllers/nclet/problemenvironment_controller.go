@@ -208,7 +208,6 @@ func (r *ProblemEnvironmentReconciler) deploy(
 			corev1.EventTypeNormal,
 			netconv1alpha1.ProblemEnvironmentEventDeployed,
 			"Deployed ProblemEnvironment in %s",
-			r.WorkerName,
 			elapsed.String(),
 		)
 		reason := "Deployed"
