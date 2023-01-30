@@ -1,7 +1,8 @@
 name: build
 on:
   push:
-    branches: []
+    branches:
+      - dummy
 
 jobs:
   build-controller-manager:
