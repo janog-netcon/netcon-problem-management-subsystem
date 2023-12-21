@@ -64,7 +64,7 @@ jobs:
           push: true
           tags: |
             asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-gateway:latest
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53netcon-pms-gateway:master
+            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-gateway:master
             asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-gateway:commit-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
