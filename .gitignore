@@ -32,4 +32,5 @@ kubeconfig
 /site
 
 kubectl-netcon
+access-helper
 

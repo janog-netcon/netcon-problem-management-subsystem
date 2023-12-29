@@ -15,11 +15,6 @@ import (
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
 )
 
-const (
-	AccessMethodKey = "netcon.janog.gr.jp/accessMethod"
-	AdminOnlyKey    = "netcon.janog.gr.jp/adminOnly"
-)
-
 func askUserForNode(config *containerlab.Config, isAdmin bool) string {
 	nodeNames := []string{}
 	for nodeName, nodeDefinition := range config.Topology.Nodes {
@@ -155,14 +150,18 @@ func main() {
 			}
 
 			if len(args) == 1 { // if nodeName is specified
-				accessNode(ctx, client, config, args[0], isAdmin)
+				if err := accessNode(ctx, client, config, args[0], isAdmin); err != nil {
+					fmt.Printf("failed to access node: %v\n", err)
+				}
 			} else {
 				for {
 					nodeName := askUserForNode(config, isAdmin)
 					if nodeName == "" {
 						return nil
 					}
-					accessNode(ctx, client, config, nodeName, isAdmin)
+					if err := accessNode(ctx, client, config, nodeName, isAdmin); err != nil {
+						fmt.Printf("failed to access node: %v\n", err)
+					}
 				}
 			}
 

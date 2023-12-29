@@ -14,15 +14,19 @@ func init() {
 
 const AccessMethodExec AccessMethod = "exec"
 
-type ExecAccessHelper struct {
-}
+type ExecAccessHelper struct{}
 
 func (h *ExecAccessHelper) access(
 	ctx context.Context,
 	nodeDefinition containerlab.NodeDefinition,
 	containerDetails containerlab.ContainerDetails,
 ) error {
-	cmd := exec.CommandContext(ctx, "docker", "exec", "-it", containerDetails.Name, "sh")
+	execCommand := defaultExecCommand
+	if v, ok := nodeDefinition.Labels[execCommandKey]; ok {
+		execCommand = v
+	}
+
+	cmd := exec.CommandContext(ctx, "docker", "exec", "-it", containerDetails.Name, execCommand)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -33,8 +37,9 @@ func (h *ExecAccessHelper) access(
 	}
 
 	err := cmd.Wait()
-	if err, ok := err.(*exec.ExitError); ok {
-		os.Exit(err.ExitCode())
+	if _, ok := err.(*exec.ExitError); ok {
+		// User may occur ExitError, but it's not needed to handle here.
+		return nil
 	}
 
 	return err
