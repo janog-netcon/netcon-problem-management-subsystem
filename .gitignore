@@ -31,3 +31,5 @@ kubeconfig
 /data
 /site
 
+kubectl-netcon
+
