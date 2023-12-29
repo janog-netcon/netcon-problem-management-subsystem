@@ -7,7 +7,7 @@ This page describes how to set up a development environment like the following.
 ## Prerequisites
 
 * You need to prepare Linux VM (Ubuntu 22.04 is preferable)
-* You need to install `build-essential`. 
+* You need to install `build-essential`.
 
 ## Installing prerequisites
 
@@ -48,7 +48,7 @@ sudo usermod -aG docker "$(id -un)"
 [kind](https://kind.sigs.k8s.io/) is a handy tool to run Kubernetes clusters on your local machine.
 
 ```bash
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.16.0/kind-linux-amd64
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
 chmod +x ./kind
 sudo mv ./kind /usr/local/bin/kind
 ```
@@ -93,7 +93,7 @@ make deploy
 You can check the status of managers with `kubectl -n netcon get pods`.
 
 ```bash
-$ kubectl -n netcon get pods 
+$ kubectl -n netcon get pods
 NAME                                         READY   STATUS    RESTARTS   AGE
 netcon-controller-manager-6b49cb47fb-mn967   2/2     Running   0          9d
 netcon-gateway-fdccf68c5-x9vpb               1/1     Running   0          7m
