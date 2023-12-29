@@ -36,6 +36,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	controllers "github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet"
@@ -93,9 +94,10 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
 		HealthProbeBindAddress: probeAddr,
 		// nclet run on each Worker, so LeaderElection isn't needed
 		LeaderElection: false,
@@ -168,12 +170,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(controllers.NewSSHServer(sshAddr, adminPass)); err != nil {
+	if err = mgr.Add(controllers.NewSSHServer(mgr.GetClient(), sshAddr, adminPass)); err != nil {
 		setupLog.Error(err, "unable to create ssh server")
 		os.Exit(1)
 	}
 
 	if err = mgr.Add(controllers.NewHeartbeatAgent(
+		mgr.GetClient(),
 		workerName,
 		externalIPAddr,
 		uint16(sshPort),

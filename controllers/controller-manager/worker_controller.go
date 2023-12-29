@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type WorkerController struct {
@@ -25,14 +24,15 @@ type WorkerController struct {
 	workerMonitorPeriod time.Duration
 }
 
-var _ inject.Client = &WorkerController{}
 var _ manager.Runnable = &WorkerController{}
 
 func NewWorkerController(
+	client client.Client,
 	workerMonitorPeriod time.Duration,
 	recorder record.EventRecorder,
 ) *WorkerController {
 	return &WorkerController{
+		Client:              client,
 		workerMonitorPeriod: workerMonitorPeriod,
 		recorder:            recorder,
 	}
@@ -41,12 +41,6 @@ func NewWorkerController(
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch
-
-// InjectClient implements inject.Client
-func (wc *WorkerController) InjectClient(c client.Client) error {
-	wc.Client = c
-	return nil
-}
 
 // Start implements manager.Runnable
 func (wc *WorkerController) Start(ctx context.Context) error {

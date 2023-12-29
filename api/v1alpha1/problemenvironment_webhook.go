@@ -24,6 +24,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -49,32 +50,32 @@ func (r *ProblemEnvironment) Default() {
 var _ webhook.Validator = &ProblemEnvironment{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *ProblemEnvironment) ValidateCreate() error {
+func (r *ProblemEnvironment) ValidateCreate() (admission.Warnings, error) {
 	problemenvironmentlog.Info("validate create", "name", r.Name)
 
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) error {
+func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	problemenvironmentlog.Info("validate update", "name", r.Name)
 
 	or := old.(*ProblemEnvironment)
 
 	if or.Spec.WorkerName != "" && r.Spec.WorkerName != or.Spec.WorkerName {
-		return fmt.Errorf(".spec.workerName: workerName can't be updated after scheduling")
+		return nil, fmt.Errorf(".spec.workerName: workerName can't be updated after scheduling")
 	}
 
 	if !reflect.DeepEqual(r.Spec.TopologyFile, or.Spec.TopologyFile) {
-		return fmt.Errorf(".spec.containerLabManifest: containerLabManifest can't be updated")
+		return nil, fmt.Errorf(".spec.containerLabManifest: containerLabManifest can't be updated")
 	}
 
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *ProblemEnvironment) ValidateDelete() error {
+func (r *ProblemEnvironment) ValidateDelete() (admission.Warnings, error) {
 	problemenvironmentlog.Info("validate delete", "name", r.Name)
 
-	return nil
+	return nil, nil
 }

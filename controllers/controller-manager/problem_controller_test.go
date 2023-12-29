@@ -32,8 +32,7 @@ var _ = Describe("Problem controller", func() {
 		time.Sleep(100 * time.Millisecond)
 
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:             scheme.Scheme,
-			MetricsBindAddress: "0",
+			Scheme: scheme.Scheme,
 		})
 		Expect(err).ToNot(HaveOccurred())
 

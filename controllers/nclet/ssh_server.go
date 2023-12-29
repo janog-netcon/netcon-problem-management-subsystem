@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
@@ -79,22 +78,17 @@ type SSHServer struct {
 	adminPassword string
 }
 
-func NewSSHServer(sshAddr string, adminPassword string) *SSHServer {
+func NewSSHServer(client client.Client, sshAddr string, adminPassword string) *SSHServer {
 	return &SSHServer{
+		Client:        client,
 		sshAddr:       sshAddr,
 		adminPassword: adminPassword,
 	}
 }
 
 var _ manager.Runnable = &SSHServer{}
-var _ inject.Client = &SSHServer{}
 
 var rsaHostKeyPath = path.Join("data", "ssh_host_rsa_key")
-
-func (r *SSHServer) InjectClient(client client.Client) error {
-	r.Client = client
-	return nil
-}
 
 func (r *SSHServer) fileExists(path string) bool {
 	_, err := os.Stat(path)
