@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -39,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
-	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet"
+	controllers "github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet/drivers"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/crypto"
 	//+kubebuilder:scaffold:imports
@@ -112,10 +111,6 @@ func main() {
 	}
 
 	driver := drivers.NewContainerLabProblemEnvironmentDriver(configDir, dockerClient)
-	if err := driver.Setup(context.Background()); err != nil {
-		setupLog.Error(err, "failed to set up container lab problem environment driver")
-		os.Exit(1)
-	}
 
 	workerName, err := os.Hostname()
 	if err != nil {

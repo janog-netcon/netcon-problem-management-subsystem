@@ -272,6 +272,11 @@ func (d *ContainerLabProblemEnvironmentDriver) Deploy(
 		return err
 	}
 
+	// Before deploying ContainerLab, ensure that the management network exists
+	if err := d.ensureManagementNetwork(ctx); err != nil {
+		return err
+	}
+
 	return d.deploy(ctx, client, clabClient, &problemEnvironment)
 }
 
@@ -338,16 +343,20 @@ func (d *ContainerLabProblemEnvironmentDriver) Destroy(
 func (d *ContainerLabProblemEnvironmentDriver) ensureManagementNetwork(ctx context.Context) error {
 	name := "nc-mgmt"
 
-	_, err := d.dockerClient.NetworkInspect(ctx, name, dockerTypes.NetworkInspectOptions{})
-
-	// Management Network is already created
-	if err == nil {
-		return nil
-	}
-
-	// Unexpected error occured
+	managementNetwork, err := d.dockerClient.NetworkInspect(ctx, name, dockerTypes.NetworkInspectOptions{})
 	if err != nil && !dockerClient.IsErrNotFound(err) {
 		return err
+	}
+
+	if err == nil {
+		if d.checkManagementNetwork(managementNetwork) {
+			return nil
+		}
+
+		// If the management network is not desired, remove and recreate.
+		if err := d.dockerClient.NetworkRemove(ctx, name); err != nil {
+			return err
+		}
 	}
 
 	options := dockerTypes.NetworkCreate{
@@ -369,6 +378,22 @@ func (d *ContainerLabProblemEnvironmentDriver) ensureManagementNetwork(ctx conte
 	return err
 }
 
-func (d *ContainerLabProblemEnvironmentDriver) Setup(ctx context.Context) error {
-	return d.ensureManagementNetwork(ctx)
+func (d *ContainerLabProblemEnvironmentDriver) checkManagementNetwork(network dockerTypes.NetworkResource) bool {
+	if network.Driver != "bridge" {
+		return false
+	}
+
+	if network.IPAM.Driver != "default" {
+		return false
+	}
+
+	if len(network.IPAM.Config) != 1 {
+		return false
+	}
+
+	if network.IPAM.Config[0].Subnet != "100.64.0.0/10" || network.IPAM.Config[0].Gateway != "100.64.0.1" {
+		return false
+	}
+
+	return true
 }
