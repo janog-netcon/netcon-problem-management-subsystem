@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -37,9 +36,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
-	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet"
+	controllers "github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet/drivers"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/crypto"
 	//+kubebuilder:scaffold:imports
@@ -94,9 +94,10 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
 		HealthProbeBindAddress: probeAddr,
 		// nclet run on each Worker, so LeaderElection isn't needed
 		LeaderElection: false,
@@ -112,10 +113,6 @@ func main() {
 	}
 
 	driver := drivers.NewContainerLabProblemEnvironmentDriver(configDir, dockerClient)
-	if err := driver.Setup(context.Background()); err != nil {
-		setupLog.Error(err, "failed to set up container lab problem environment driver")
-		os.Exit(1)
-	}
 
 	workerName, err := os.Hostname()
 	if err != nil {
@@ -173,12 +170,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = mgr.Add(controllers.NewSSHServer(sshAddr, adminPass)); err != nil {
+	if err = mgr.Add(controllers.NewSSHServer(mgr.GetClient(), sshAddr, adminPass)); err != nil {
 		setupLog.Error(err, "unable to create ssh server")
 		os.Exit(1)
 	}
 
 	if err = mgr.Add(controllers.NewHeartbeatAgent(
+		mgr.GetClient(),
 		workerName,
 		externalIPAddr,
 		uint16(sshPort),

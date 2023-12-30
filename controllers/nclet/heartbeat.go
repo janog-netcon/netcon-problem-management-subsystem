@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	cpu "github.com/shirou/gopsutil/v3/cpu"
@@ -44,8 +43,9 @@ type HeartbeatAgent struct {
 	memUsedHistory [MEM_USED_HISTORY_SIZE]float64
 }
 
-func NewHeartbeatAgent(workerName string, externalIPaddr string, externalPort uint16, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
+func NewHeartbeatAgent(client client.Client, workerName string, externalIPaddr string, externalPort uint16, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
 	return &HeartbeatAgent{
+		Client:             client,
 		workerName:         workerName,
 		externalIPAddr:     externalIPaddr,
 		externalPort:       externalPort,
@@ -54,17 +54,8 @@ func NewHeartbeatAgent(workerName string, externalIPaddr string, externalPort ui
 	}
 }
 
-// Controller-manager will inject Kubernetes API client to inject.Client
-var _ inject.Client = &HeartbeatAgent{}
-
 // Controller-manager can run manager.Runnable
 var _ manager.Runnable = &HeartbeatAgent{}
-
-// InjectClient implements inject.Client
-func (a *HeartbeatAgent) InjectClient(c client.Client) error {
-	a.Client = c
-	return nil
-}
 
 // Start implements manager.Runnable
 func (a *HeartbeatAgent) Start(ctx context.Context) error {

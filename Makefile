@@ -1,6 +1,6 @@
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.25.0
+ENVTEST_K8S_VERSION = 1.27.x
 
 # PLATFORMS defines the target platforms for  the manager image be build to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
@@ -26,7 +26,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 .PHONY: all
-all: build
+all: help
 
 ##@ General
 
@@ -69,19 +69,14 @@ test: manifests generate fmt vet envtest ## Run tests.
 
 ##@ Build
 
-.PHONY: build
-build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
-
-.PHONY: run
-run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
-
 .PHONY: docker-build
-docker-build: controller-manager-docker-build nclet-docker-build
+docker-build: controller-manager-docker-build nclet-docker-build gateway-docker-build
 
 .PHONY: docker-push
-docker-push: controller-manager-docker-push nclet-docker-push
+docker-push: controller-manager-docker-push nclet-docker-push gateway-docker-push
+
+.PHONY: kind-push
+kind-push: controller-manager-kind-push nclet-kind-push gateway-kind-push
 
 ##@ Deployment
 

@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type MetricsExporter struct {
@@ -63,25 +62,20 @@ var (
 	)
 )
 
-var _ inject.Client = &MetricsExporter{}
 var _ manager.Runnable = &MetricsExporter{}
 
 func NewMetricsExporter(
+	client client.Client,
 	scrapeInterval time.Duration,
 ) *MetricsExporter {
 	return &MetricsExporter{
+		Client:         client,
 		scrapeInterval: scrapeInterval,
 	}
 }
 
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers,verbs=get;list;watch
 //+kubebuilder:rbac:groups=netcon.janog.gr.jp,resources=workers/status,verbs=get
-
-// InjectClient implements inject.Client
-func (me *MetricsExporter) InjectClient(c client.Client) error {
-	me.Client = c
-	return nil
-}
 
 // Start implements manager.Runnable
 func (me *MetricsExporter) Start(ctx context.Context) error {

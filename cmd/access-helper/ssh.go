@@ -21,40 +21,23 @@ func init() {
 
 const AccessMethodSSH AccessMethod = "ssh"
 
-const (
-	usernameKey = "netcon.janog.gr.jp/username"
-
-	passwordKey = "netcon.janog.gr.jp/password"
-
-	portKey            = "netcon.janog.gr.jp/port"
-	defaultPort uint16 = 22
-)
-
-// defaultUsername and defaultPassword should be override when building access-helper with -ldflags
-// ref: https://uokada.hatenablog.jp/entry/2015/05/20/001208
-var (
-	defaultUsername string
-	defaultPassword string
-)
-
-type SSHAccessHelper struct {
-}
+type SSHAccessHelper struct{}
 
 func (h *SSHAccessHelper) loadParameters(
 	nodeDefinition containerlab.NodeDefinition,
 ) (string, string, uint16, error) {
-	username := defaultUsername
-	if v, ok := nodeDefinition.Labels[usernameKey]; ok {
+	username := defaultSSHUsername
+	if v, ok := nodeDefinition.Labels[sshUsernameKey]; ok {
 		username = v
 	}
 
-	password := defaultPassword
-	if v, ok := nodeDefinition.Labels[passwordKey]; ok {
+	password := defaultSSHPassword
+	if v, ok := nodeDefinition.Labels[sshPasswordKey]; ok {
 		password = v
 	}
 
-	port := defaultPort
-	if v, ok := nodeDefinition.Labels[portKey]; ok {
+	port := defaultSSHPort
+	if v, ok := nodeDefinition.Labels[sshPortKey]; ok {
 		p, err := strconv.ParseUint(v, 10, 16)
 		if err != nil {
 			return "", "", 0, errors.Errorf("could not parse port")
@@ -82,7 +65,7 @@ func (h *SSHAccessHelper) _access(
 			ssh.Password(password),
 			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
 				answers := make([]string, len(questions))
-				for i, _ := range answers {
+				for i := range answers {
 					answers[i] = password
 				}
 				return answers, nil
@@ -163,12 +146,10 @@ func (h *SSHAccessHelper) access(
 	nodeDefinition containerlab.NodeDefinition,
 	containerDetails containerlab.ContainerDetails,
 ) error {
-	status, err := h._access(ctx, nodeDefinition, containerDetails)
+	_, err := h._access(ctx, nodeDefinition, containerDetails)
 	if err != nil {
 		return err
 	}
 
-	// os.Exit will not return, so return statement will not be executed
-	os.Exit(status)
 	return nil
 }
