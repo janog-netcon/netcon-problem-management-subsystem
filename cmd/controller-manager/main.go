@@ -130,7 +130,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := mgr.Add(controllers.NewMetricsExporter(mgr.GetClient(), 3*time.Second)); err != nil {
+	if err := mgr.Add(&controllers.MetricsExporter{
+		Client:         mgr.GetClient(),
+		Log:            mgr.GetLogger().WithName("metrics-exporter"),
+		ScrapeInterval: 3 * time.Second,
+	}); err != nil {
 		setupLog.Error(err, "unable to create metrics exporter", "target", "Problem")
 		os.Exit(1)
 	}
