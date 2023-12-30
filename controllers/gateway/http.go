@@ -85,10 +85,12 @@ func (g *Gateway) GetProblemEnvironmentController(w http.ResponseWriter, r *http
 
 		if _, ok := AsErrWorkerNotFound(err); ok {
 			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("worker not found"))
 			return
 		}
 
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -122,10 +124,12 @@ func (g *Gateway) AcquireProblemEnvironmentHandler(w http.ResponseWriter, r *htt
 
 		if _, ok := AsErrWorkerNotFound(err); ok {
 			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("worker not found"))
 			return
 		}
 
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -147,6 +151,7 @@ func (g *Gateway) ReleaseProblemEnvironmentHandler(w http.ResponseWriter, r *htt
 		}
 
 		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
 	}
 
