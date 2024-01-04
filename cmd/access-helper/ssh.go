@@ -103,7 +103,8 @@ func (h *SSHAccessHelper) _access(
 
 	// Set up terminal modes
 	modes := ssh.TerminalModes{
-		ssh.ECHO: 1,
+		ssh.ECHO:    1,
+		ssh.ECHOCTL: 1,
 	}
 
 	// Request PTY for this session
@@ -123,6 +124,10 @@ func (h *SSHAccessHelper) _access(
 
 			session.WindowChange(height, width)
 		}
+	}()
+	defer func() {
+		signal.Stop(sigWinchChan)
+		close(sigWinchChan)
 	}()
 
 	session.Stdout = os.Stdout

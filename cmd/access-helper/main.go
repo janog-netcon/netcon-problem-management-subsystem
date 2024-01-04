@@ -1,12 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -34,19 +38,46 @@ func askUserForNode(config *containerlab.Config, isAdmin bool) string {
 	}
 	fmt.Println("     0: (exit)")
 
+	reader := bufio.NewReader(os.Stdin)
 	for {
-		var selected int
 		fmt.Print("Your select: ")
-		if _, err := fmt.Scan(&selected); err != nil {
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			// exit if Ctrl+D entered
+			if errors.Is(err, io.EOF) {
+				return ""
+			}
+
 			fmt.Println("Please input collect value.")
 			continue
 		}
 
+		fmt.Printf("%v\n", []byte(input))
+
+		// Trim rightmost "\n" for easy handling
+		input = strings.TrimRight(input, "\n")
+
+		switch input {
+		case "":
+			// if input is empty, continue
+			continue
+
+		case "exit":
+			// Normally, "0" should be entered to exit.
+			// However, if the user enters "exit", it will be treated as "0".
+			return ""
+		}
+
+		selected, err := strconv.ParseInt(strings.TrimRight(input, "\n"), 10, 64)
+		if err != nil {
+			fmt.Println("Please input collect value.")
+			continue
+		}
 		if selected == 0 {
 			return ""
 		}
 
-		if !(1 <= selected && selected <= len(nodeNames)) {
+		if !(1 <= selected && int(selected) <= len(nodeNames)) {
 			fmt.Println("Please input collect value.")
 			continue
 		}
@@ -154,14 +185,12 @@ func main() {
 					fmt.Printf("failed to access node: %v\n", err)
 				}
 			} else {
-				for {
-					nodeName := askUserForNode(config, isAdmin)
-					if nodeName == "" {
-						return nil
-					}
-					if err := accessNode(ctx, client, config, nodeName, isAdmin); err != nil {
-						fmt.Printf("failed to access node: %v\n", err)
-					}
+				nodeName := askUserForNode(config, isAdmin)
+				if nodeName == "" {
+					return nil
+				}
+				if err := accessNode(ctx, client, config, nodeName, isAdmin); err != nil {
+					fmt.Printf("failed to access node: %v\n", err)
 				}
 			}
 
