@@ -52,8 +52,6 @@ func askUserForNode(config *containerlab.Config, isAdmin bool) string {
 			continue
 		}
 
-		fmt.Printf("%v\n", []byte(input))
-
 		// Trim rightmost "\n" for easy handling
 		input = strings.TrimRight(input, "\n")
 
