@@ -197,8 +197,8 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 			return arr[i].Count < arr[j].Count
 		}
 
-		scoreI := arr[i].CPUUsedPercent + 2*arr[i].MemoryUsedPercent
-		scoreJ := arr[j].CPUUsedPercent + 2*arr[j].MemoryUsedPercent
+		scoreI := arr[i].CPUUsedPercent + arr[i].MemoryUsedPercent
+		scoreJ := arr[j].CPUUsedPercent + arr[j].MemoryUsedPercent
 		return scoreI < scoreJ
 	})
 
