@@ -20,6 +20,7 @@ func (h *ExecAccessHelper) access(
 	ctx context.Context,
 	nodeDefinition containerlab.NodeDefinition,
 	containerDetails containerlab.ContainerDetails,
+	_isAdmin bool,
 ) error {
 	execCommand := defaultExecCommand
 	if v, ok := nodeDefinition.Labels[execCommandKey]; ok {

@@ -139,7 +139,7 @@ func accessNode(
 	}
 
 	if helper := findAccessHelper(accessMethod); helper != nil {
-		return helper.access(ctx, *nodeDefinition, *containerDetails)
+		return helper.access(ctx, *nodeDefinition, *containerDetails, isAdmin)
 	}
 
 	return errors.New(fmt.Sprintf("no such method: %s", accessMethod))

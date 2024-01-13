@@ -14,6 +14,7 @@ type AccessHelper interface {
 		ctx context.Context,
 		nodeDefinition containerlab.NodeDefinition,
 		containerDetails containerlab.ContainerDetails,
+		isAdmin bool,
 	) error
 }
 

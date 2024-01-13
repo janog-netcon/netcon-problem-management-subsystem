@@ -20,6 +20,14 @@ const (
 	// The default value is defaultPassword.
 	sshPasswordKey = "netcon.janog.gr.jp/sshPassword"
 
+	// sshUsernameForAdminKey is the label key to specify username for SSH access for admin user.
+	// The default value is defaultUsername.
+	sshUsernameForAdminKey = "netcon.janog.gr.jp/sshUsernameForAdmin"
+
+	// sshPasswordForAdminKey is the label key to specify password for SSH access for admin user.
+	// The default value is defaultPassword.
+	sshPasswordForAdminKey = "netcon.janog.gr.jp/sshPasswordForAdmin"
+
 	// sshPortKey is the label key to specify port number for SSH access.
 	// The default value is defaultPort.
 	sshPortKey            = "netcon.janog.gr.jp/sshPort"
