@@ -25,14 +25,19 @@ type SSHAccessHelper struct{}
 
 func (h *SSHAccessHelper) loadParameters(
 	nodeDefinition containerlab.NodeDefinition,
+	isAdmin bool,
 ) (string, string, uint16, error) {
 	username := defaultSSHUsername
-	if v, ok := nodeDefinition.Labels[sshUsernameKey]; ok {
+	if v, ok := nodeDefinition.Labels[sshUsernameForAdminKey]; ok && isAdmin {
+		username = v
+	} else if v, ok := nodeDefinition.Labels[sshUsernameKey]; ok {
 		username = v
 	}
 
 	password := defaultSSHPassword
-	if v, ok := nodeDefinition.Labels[sshPasswordKey]; ok {
+	if v, ok := nodeDefinition.Labels[sshPasswordForAdminKey]; ok && isAdmin {
+		password = v
+	} else if v, ok := nodeDefinition.Labels[sshPasswordKey]; ok {
 		password = v
 	}
 
@@ -52,8 +57,9 @@ func (h *SSHAccessHelper) _access(
 	ctx context.Context,
 	nodeDefinition containerlab.NodeDefinition,
 	containerDetails containerlab.ContainerDetails,
+	isAdmin bool,
 ) (int, error) {
-	userName, password, port, err := h.loadParameters(nodeDefinition)
+	userName, password, port, err := h.loadParameters(nodeDefinition, isAdmin)
 	if err != nil {
 		return 0, err
 	}
@@ -150,8 +156,9 @@ func (h *SSHAccessHelper) access(
 	ctx context.Context,
 	nodeDefinition containerlab.NodeDefinition,
 	containerDetails containerlab.ContainerDetails,
+	isAdmin bool,
 ) error {
-	_, err := h._access(ctx, nodeDefinition, containerDetails)
+	_, err := h._access(ctx, nodeDefinition, containerDetails, isAdmin)
 	if err != nil {
 		return err
 	}
