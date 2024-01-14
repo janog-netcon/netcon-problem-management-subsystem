@@ -99,6 +99,15 @@ var (
 		},
 		problemsMetricsLabels,
 	)
+
+	problemEnvironmentMetricsLabels = []string{"namespace", "name"}
+	problemEnvironmentsReady        = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "problem_environments_ready",
+		},
+		problemEnvironmentMetricsLabels,
+	)
 )
 
 var _ manager.Runnable = &MetricsExporter{}
@@ -118,6 +127,7 @@ func (me *MetricsExporter) Start(ctx context.Context) error {
 		problemEnvironmentsTotal,
 		problemEnvironmentsReadyTotal,
 		problemEnvironmentsAssignedTotal,
+		problemEnvironmentsReady,
 	} {
 		if err := metrics.Registry.Register(collector); err != nil {
 			return err
@@ -160,6 +170,7 @@ func (me *MetricsExporter) collect(ctx context.Context) error {
 
 	workersReady.Reset()
 	workersSchedulable.Reset()
+	workersScheduledProblemEnvironmentsTotal.Reset()
 	for _, worker := range workers.Items {
 		labels := []string{worker.Namespace, worker.Name}
 
@@ -190,12 +201,17 @@ func (me *MetricsExporter) collect(ctx context.Context) error {
 
 	// Problems-related metrics
 	problemsTotal.Set(float64(len(problems.Items)))
+	problemsAssignableReplicasTotal.Reset()
 	for _, problem := range problems.Items {
 		labels := []string{problem.Namespace, problem.Name}
 		problemsAssignableReplicasTotal.WithLabelValues(labels...).Set(float64(problem.Spec.AssignableReplicas))
 	}
 
 	// ProblemEnvironments-related metrics
+	problemEnvironmentsTotal.Reset()
+	problemEnvironmentsReadyTotal.Reset()
+	problemEnvironmentsAssignedTotal.Reset()
+	problemEnvironmentsReady.Reset()
 	for _, problem := range problems.Items {
 		labels := []string{problem.Namespace, problem.Name}
 
@@ -228,6 +244,21 @@ func (me *MetricsExporter) collect(ctx context.Context) error {
 		problemEnvironmentsTotal.WithLabelValues(labels...).Set(float64(total))
 		problemEnvironmentsReadyTotal.WithLabelValues(labels...).Set(float64(readyTotal))
 		problemEnvironmentsAssignedTotal.WithLabelValues(labels...).Set(float64(assignedTotal))
+	}
+
+	for _, problemEnvironment := range problemEnvironments.Items {
+		isReady := util.GetProblemEnvironmentCondition(
+			&problemEnvironment,
+			netconv1alpha1.ProblemEnvironmentConditionReady,
+		) == metav1.ConditionTrue
+
+		labels := []string{problemEnvironment.Namespace, problemEnvironment.Name}
+		if isReady {
+			problemEnvironmentsReady.WithLabelValues(labels...).Set(float64(1))
+		} else {
+			problemEnvironmentsReady.WithLabelValues(labels...).Set(float64(0))
+		}
+
 	}
 
 	return nil
