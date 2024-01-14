@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
@@ -101,11 +103,11 @@ func (h *SSHAccessHelper) _access(
 		return 0, err
 	}
 
-	state, err := term.MakeRaw(0)
+	state, err := makeRaw(0)
 	if err != nil {
 		return 0, err
 	}
-	defer term.Restore(0, state)
+	defer restore(0, state)
 
 	// Set up terminal modes
 	modes := ssh.TerminalModes{
@@ -138,7 +140,60 @@ func (h *SSHAccessHelper) _access(
 
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
+
+	// If we copy stdin to the session with `session.Stdin = os.Stdin`, ssh package will copy bytes with io.Copy.
+	// However, it occurs a problem that os.Stdin can't be used after the session is closed until the enter is pressed.
+	//
+	// 1. The user closes SSH session between access-helper and the node.
+	//    But io.Copy is not stopped because any characters are not sent to access-helper.
+	// 2. term.Restore() changes terminal mode from non-canonical mode to canonical mode.
+	// 3. Until the user presses enter, the entered characters are buffered and not sent to access-helper.
+	// 4. If the user presses enter, the entered characters are delivered to io.Copy.
+	//    However, because the SSH session is already closed, the characters are discarded.
+	// 5. The user becomes able to select next nodes normally.
+	//
+	// To avoid this problem, this function will use special I/O handler for stdin.
+
+	// To prevent ssh package to use io.Copy, call StdinPipe().
+	stdinPipe, err := session.StdinPipe()
+	if err != nil {
+		return 0, err
+	}
+
+	isConnectionClosed := false
+	stdinClonerDone := sync.WaitGroup{}
+	stdinClonerDone.Add(1)
+
+	defer func() {
+		isConnectionClosed = true
+		stdinClonerDone.Wait()
+	}()
+
+	go func() {
+		buf := make([]byte, 32*1024)
+		for {
+			if isConnectionClosed {
+				break
+			}
+
+			nr, err := os.Stdin.Read(buf)
+			if err != nil && !errors.Is(err, io.EOF) {
+				fmt.Printf("Read: %+v\n", err)
+				break
+			}
+
+			if nr == 0 {
+				continue
+			}
+
+			if _, err := stdinPipe.Write(buf[:nr]); err != nil {
+				fmt.Printf("Write: %+v\n", err)
+				break
+			}
+		}
+
+		stdinClonerDone.Done()
+	}()
 
 	if err := session.Shell(); err != nil {
 		return 0, err

@@ -183,12 +183,14 @@ func main() {
 					fmt.Printf("failed to access node: %v\n", err)
 				}
 			} else {
-				nodeName := askUserForNode(config, isAdmin)
-				if nodeName == "" {
-					return nil
-				}
-				if err := accessNode(ctx, client, config, nodeName, isAdmin); err != nil {
-					fmt.Printf("failed to access node: %v\n", err)
+				for {
+					nodeName := askUserForNode(config, isAdmin)
+					if nodeName == "" {
+						return nil
+					}
+					if err := accessNode(ctx, client, config, nodeName, isAdmin); err != nil {
+						fmt.Printf("failed to access node: %v\n", err)
+					}
 				}
 			}
 
