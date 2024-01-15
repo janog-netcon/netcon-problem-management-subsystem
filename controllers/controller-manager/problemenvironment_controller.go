@@ -193,8 +193,8 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 		return ""
 	}
 	sort.Slice(arr, func(i, j int) bool {
-		scoreI := arr[i].CPUUsedPercent + arr[i].MemoryUsedPercent
-		scoreJ := arr[j].CPUUsedPercent + arr[j].MemoryUsedPercent
+		scoreI := 2 * arr[i].CPUUsedPercent + arr[i].MemoryUsedPercent
+		scoreJ := 2 * arr[j].CPUUsedPercent + arr[j].MemoryUsedPercent
 		return scoreI < scoreJ
 	})
 
