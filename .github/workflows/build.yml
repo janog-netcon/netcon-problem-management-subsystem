@@ -23,7 +23,7 @@ jobs:
       - name: Export credentials for Docker
         run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev -q
       - name: Set up Docker buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Build and push controller-manager
         uses: docker/build-push-action@v3
         with:
@@ -55,7 +55,7 @@ jobs:
       - name: Export credentials for Docker
         run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev -q
       - name: Set up Docker buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Build and push gateway
         uses: docker/build-push-action@v3
         with:
@@ -89,7 +89,7 @@ jobs:
       - name: Export credentials for Docker
         run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev -q
       - name: Set up Docker buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
       - name: Build and push nclet
         uses: docker/build-push-action@v3
         with:
