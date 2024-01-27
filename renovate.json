@@ -7,7 +7,7 @@
   "postUpdateOptions": [
     "gomodTidy"
   ],
-  "reviewers": 
+  "reviewers": [
     "proelbtn"
   ]
 }
