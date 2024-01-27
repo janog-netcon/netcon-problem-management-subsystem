@@ -7,7 +7,7 @@ toolchain go1.21.5
 require (
 	github.com/fatih/color v1.16.0
 	github.com/go-chi/chi/v5 v5.0.11
-	github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515
+	github.com/kr/logfmt v0.0.0-20210122060352-19f9bcb100e6
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.29.0
 	github.com/shirou/gopsutil/v3 v3.22.10
