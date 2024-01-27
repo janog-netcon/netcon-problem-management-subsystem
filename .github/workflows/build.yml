@@ -25,7 +25,7 @@ jobs:
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v3
       - name: Build and push controller-manager
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./cmd/controller-manager/Dockerfile
@@ -57,7 +57,7 @@ jobs:
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v3
       - name: Build and push gateway
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./cmd/gateway/Dockerfile
@@ -91,7 +91,7 @@ jobs:
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v3
       - name: Build and push nclet
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: ./cmd/nclet/Dockerfile
