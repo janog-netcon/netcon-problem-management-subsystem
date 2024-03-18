@@ -8,8 +8,8 @@ require (
 	github.com/fatih/color v1.16.0
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/kr/logfmt v0.0.0-20210122060352-19f9bcb100e6
-	github.com/onsi/ginkgo/v2 v2.13.0
-	github.com/onsi/gomega v1.29.0
+	github.com/onsi/ginkgo/v2 v2.15.0
+	github.com/onsi/gomega v1.32.0
 	github.com/shirou/gopsutil/v3 v3.22.10
 	k8s.io/api v0.29.1
 	k8s.io/apimachinery v0.29.1
@@ -98,16 +98,16 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/crypto v0.17.0
-	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/crypto v0.18.0
+	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
-	golang.org/x/sys v0.15.0
-	golang.org/x/term v0.15.0
+	golang.org/x/sys v0.16.0
+	golang.org/x/term v0.16.0
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
