@@ -31,9 +31,9 @@ jobs:
           file: ./cmd/controller-manager/Dockerfile
           push: true
           tags: |
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-controller-manager:latest
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-controller-manager:master
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-controller-manager:commit-${{ github.sha }}
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-controller-manager:latest
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-controller-manager:master
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-controller-manager:commit-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -63,9 +63,9 @@ jobs:
           file: ./cmd/gateway/Dockerfile
           push: true
           tags: |
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-gateway:latest
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-gateway:master
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-gateway:commit-${{ github.sha }}
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-gateway:latest
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-gateway:master
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-gateway:commit-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -100,9 +100,9 @@ jobs:
             DEFAULT_SSH_USERNAME=${{ secrets.NCLET_DEFAULT_SSH_USERNAME }}
             DEFAULT_SSH_PASSWORD=${{ secrets.NCLET_DEFAULT_SSH_PASSWORD }}
           tags: |
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-nclet:latest
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-nclet:master
-            asia-northeast1-docker.pkg.dev/networkcontest/janog53/netcon-pms-nclet:commit-${{ github.sha }}
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-nclet:latest
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-nclet:master
+            asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-nclet:commit-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
