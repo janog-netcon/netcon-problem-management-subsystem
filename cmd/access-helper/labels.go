@@ -2,6 +2,16 @@ package main
 
 // These are the label keys that we can customize how to access Node in ContainerLab.
 const (
+	// defaultUsername is a default username for SSH access.
+	// You can override this value when building access-helper with -ldflags.
+	// ref: https://uokada.hatenablog.jp/entry/2015/05/20/001208
+	defaultSSHUsername string = "clab"
+
+	// defaultPassword is a default password for SSH access.
+	// You can override this value when building access-helper with -ldflags.
+	// ref: https://uokada.hatenablog.jp/entry/2015/05/20/001208
+	defaultSSHPassword string = "clab@123"
+
 	// AccessMethodKey is the label key to specify the access method.
 	// The possible values are either "ssh" or "exec".
 	// With "ssh", access-helper will try to connect to the Node via SSH.
@@ -37,16 +47,4 @@ const (
 	// The default value is defaultExecCommand.
 	execCommandKey     = "netcon.janog.gr.jp/execCommand"
 	defaultExecCommand = "sh"
-)
-
-var (
-	// defaultUsername is a default username for SSH access.
-	// You can override this value when building access-helper with -ldflags.
-	// ref: https://uokada.hatenablog.jp/entry/2015/05/20/001208
-	defaultSSHUsername string
-
-	// defaultPassword is a default password for SSH access.
-	// You can override this value when building access-helper with -ldflags.
-	// ref: https://uokada.hatenablog.jp/entry/2015/05/20/001208
-	defaultSSHPassword string
 )
