@@ -53,6 +53,11 @@ func getStatusForProblemEnvironment(problemEnvironment *v1alpha1.ProblemEnvironm
 		v1alpha1.ProblemEnvironmentConditionDeployed,
 	) == metav1.ConditionTrue
 
+	ready := util.GetProblemEnvironmentCondition(
+		problemEnvironment,
+		v1alpha1.ProblemEnvironmentConditionReady,
+	) == metav1.ConditionTrue
+
 	assigned := util.GetProblemEnvironmentCondition(
 		problemEnvironment,
 		v1alpha1.ProblemEnvironmentConditionAssigned,
@@ -64,6 +69,10 @@ func getStatusForProblemEnvironment(problemEnvironment *v1alpha1.ProblemEnvironm
 
 	if !deployed {
 		return "Deploying"
+	}
+
+	if !ready {
+		return "Deploying (NotReady)"
 	}
 
 	if !assigned {
