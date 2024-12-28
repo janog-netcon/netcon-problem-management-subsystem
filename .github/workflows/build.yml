@@ -96,9 +96,6 @@ jobs:
           context: .
           file: ./cmd/nclet/Dockerfile
           push: true
-          build-args: |
-            DEFAULT_SSH_USERNAME=${{ secrets.NCLET_DEFAULT_SSH_USERNAME }}
-            DEFAULT_SSH_PASSWORD=${{ secrets.NCLET_DEFAULT_SSH_PASSWORD }}
           tags: |
             asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-nclet:latest
             asia-northeast1-docker.pkg.dev/networkcontest/janog55/netcon-pms-nclet:master

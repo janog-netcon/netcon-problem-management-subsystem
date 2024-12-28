@@ -22,9 +22,6 @@ RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o nc
 # Build the access-helper binary
 FROM golang:1.23 as access-helper_builder
 
-ARG DEFAULT_SSH_USERNAME
-ARG DEFAULT_SSH_PASSWORD
-
 WORKDIR /workspace
 COPY go.mod go.mod
 COPY go.sum go.sum
@@ -36,8 +33,7 @@ COPY pkg/ pkg/
 
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 \
-    go build -o access-helper -ldflags="-X main.defaultSSHUsername=${DEFAULT_SSH_USERNAME} -X main.defaultSSHPassword=${DEFAULT_SSH_PASSWORD}" ./cmd/access-helper
-
+    go build -o access-helper ./cmd/access-helper
 
 # Build the containerlab binary
 FROM golang:1.23 as containerlab_builder
