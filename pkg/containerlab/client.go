@@ -102,7 +102,7 @@ func (c *ContainerLabClient) DeployWithOutput(ctx context.Context) ([]byte, []by
 func (c *ContainerLabClient) Destroy(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx,
 		"clab",
-		"--log-level", "debug", "-t", c.topologyFileName, "destroy",
+		"--log-level", "debug", "-t", c.topologyFileName, "destroy", "--keep-mgmt-net",
 	)
 	cmd.Dir = c.workingDirectoryPath
 	cmd.Stderr = nil
