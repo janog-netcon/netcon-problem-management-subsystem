@@ -1,6 +1,6 @@
 # access-helper
 
-access-helper works with nclet and bridges users and ProblemEnvironment. 
+access-helper works with nclet and bridges users and ProblemEnvironment.
 
 ```mermaid
 sequenceDiagram
@@ -19,7 +19,7 @@ sequenceDiagram
       U ->> AH: Answer question
   end
 
-  AH -->> LS: Access login shell 
+  AH -->> LS: Access login shell
   Note over U, LS: Start user session
 ```
 
@@ -67,16 +67,16 @@ topology:
 
 ```
 $ sudo clab -t manifest.yaml deploy
-INFO[0000] Containerlab v0.32.1 started                 
-INFO[0000] Parsing & checking topology file: manifest.yaml 
-WARN[0000] it appears that container host has low memory available: ~0Gi. This might lead to runtime errors. Consider freeing up more memory. 
-INFO[0000] Creating lab directory: /home/jp26081/test/clab-testlab 
-INFO[0000] Creating container: "n2"                     
-INFO[0000] Creating container: "n1"                     
-INFO[0000] Creating virtual wire: n1:eth1 <--> n2:eth1  
-INFO[0001] Adding containerlab host entries to /etc/hosts file 
+INFO[0000] Containerlab v0.32.1 started
+INFO[0000] Parsing & checking topology file: manifest.yaml
+WARN[0000] it appears that container host has low memory available: ~0Gi. This might lead to runtime errors. Consider freeing up more memory.
+INFO[0000] Creating lab directory: /home/jp26081/test/clab-testlab
+INFO[0000] Creating container: "n2"
+INFO[0000] Creating container: "n1"
+INFO[0000] Creating virtual wire: n1:eth1 <--> n2:eth1
+INFO[0001] Adding containerlab host entries to /etc/hosts file
 INFO[0001] 🎉 New containerlab version 0.32.3 is available! Release notes: https://containerlab.dev/rn/0.32/#0323
-Run 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.dev/install/ 
+Run 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.dev/install/
 +---+-----------------+--------------+-----------------------------------+-------+---------+-----------------+----------------------+
 | # |      Name       | Container ID |               Image               | Kind  |  State  |  IPv4 Address   |     IPv6 Address     |
 +---+-----------------+--------------+-----------------------------------+-------+---------+-----------------+----------------------+
@@ -91,14 +91,14 @@ After deploying Lab, you can access nodes with access-helper. Note that you need
 $ sudo ../access-helper -t manifest.yaml n1
 / # echo "Hello world!"
 Hello world!
-/ # 
+/ #
 
 $ sudo ../access-helper -t manifest.yaml n2
 Welcome to OpenSSH Server
 
 n2:~$ echo "Hello world!"
 Hello world!
-n2:~$ 
+n2:~$
 logout
 ```
 
@@ -121,13 +121,17 @@ You can reject access from normal user to specific nodes with this label. "true"
 
 If you don't set this label, both normal user and admin user can access nodes.
 
-### `netcon.janog.gr.jp/username`
+### `netcon.janog.gr.jp/sshUsername`, `netcon.janog.gr.jp/sshUsernameForAdmin`
 
 You can set user name for SSH with this label. This label will be ignored when you use "exec" access method.
 
-### `netcon.janog.gr.jp/password`
+`ForAdmin` variant is used only for admin user (isAdmin == true).
+
+### `netcon.janog.gr.jp/sshPassword`, `netcon.janog.gr.jp/sshPasswordForAdmin`
 
 You can set password for SSH with this label. This label will be ignored when you use "exec" access method.
+
+`ForAdmin` variant is used only for admin user (isAdmin == true).
 
 ### `netcon.janog.gr.jp/port`
 
