@@ -1,8 +1,6 @@
 module github.com/janog-netcon/netcon-problem-management-subsystem
 
-go 1.21
-
-toolchain go1.21.5
+go 1.23
 
 require (
 	github.com/fatih/color v1.16.0

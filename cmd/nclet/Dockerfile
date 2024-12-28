@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.21 as builder
+FROM golang:1.23 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o nc
 
 
 # Build the access-helper binary
-FROM golang:1.21 as access-helper_builder
+FROM golang:1.23 as access-helper_builder
 
 ARG DEFAULT_SSH_USERNAME
 ARG DEFAULT_SSH_PASSWORD
@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 \
 
 
 # Build the containerlab binary
-FROM golang:1.21 as containerlab_builder
+FROM golang:1.23 as containerlab_builder
 
 WORKDIR /workspace
 COPY containerlab/go.mod go.mod
