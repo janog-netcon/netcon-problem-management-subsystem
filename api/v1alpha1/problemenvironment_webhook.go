@@ -22,13 +22,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-// log is for logging in this package.
-var problemenvironmentlog = logf.Log.WithName("problemenvironment-resource")
 
 func (r *ProblemEnvironment) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -42,7 +38,6 @@ var _ webhook.Defaulter = &ProblemEnvironment{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *ProblemEnvironment) Default() {
-	problemenvironmentlog.Info("default", "name", r.Name)
 }
 
 //+kubebuilder:webhook:path=/validate-netcon-janog-gr-jp-v1alpha1-problemenvironment,mutating=false,failurePolicy=fail,sideEffects=None,groups=netcon.janog.gr.jp,resources=problemenvironments,verbs=create;update,versions=v1alpha1,name=vproblemenvironment.kb.io,admissionReviewVersions=v1
@@ -51,15 +46,11 @@ var _ webhook.Validator = &ProblemEnvironment{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ProblemEnvironment) ValidateCreate() (admission.Warnings, error) {
-	problemenvironmentlog.Info("validate create", "name", r.Name)
-
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	problemenvironmentlog.Info("validate update", "name", r.Name)
-
 	or := old.(*ProblemEnvironment)
 
 	if or.Spec.WorkerName != "" && r.Spec.WorkerName != or.Spec.WorkerName {
@@ -75,7 +66,5 @@ func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) (admission.Warni
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *ProblemEnvironment) ValidateDelete() (admission.Warnings, error) {
-	problemenvironmentlog.Info("validate delete", "name", r.Name)
-
 	return nil, nil
 }

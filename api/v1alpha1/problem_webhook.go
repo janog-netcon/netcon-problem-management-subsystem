@@ -19,13 +19,9 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-// log is for logging in this package.
-var problemlog = logf.Log.WithName("problem-resource")
 
 func (r *Problem) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
@@ -39,7 +35,6 @@ var _ webhook.Defaulter = &Problem{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Problem) Default() {
-	problemlog.Info("default", "name", r.Name)
 }
 
 //+kubebuilder:webhook:path=/validate-netcon-janog-gr-jp-v1alpha1-problem,mutating=false,failurePolicy=fail,sideEffects=None,groups=netcon.janog.gr.jp,resources=problems,verbs=create;update,versions=v1alpha1,name=vproblem.kb.io,admissionReviewVersions=v1
@@ -48,21 +43,15 @@ var _ webhook.Validator = &Problem{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *Problem) ValidateCreate() (admission.Warnings, error) {
-	problemlog.Info("validate create", "name", r.Name)
-
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Problem) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	problemlog.Info("validate update", "name", r.Name)
-
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *Problem) ValidateDelete() (admission.Warnings, error) {
-	problemlog.Info("validate delete", "name", r.Name)
-
 	return nil, nil
 }
