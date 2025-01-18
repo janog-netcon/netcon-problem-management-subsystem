@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 
+	"github.com/google/shlex"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
 )
 
@@ -27,7 +29,14 @@ func (h *ExecAccessHelper) access(
 		execCommand = v
 	}
 
-	cmd := exec.CommandContext(ctx, "docker", "exec", "-it", containerDetails.Name, execCommand)
+	commands, err := shlex.Split(execCommand)
+	if err != nil {
+		return fmt.Errorf("failed to parse exec command: %w", err)
+	}
+
+	commands = append([]string{"exec", "-it", containerDetails.Name}, commands...)
+
+	cmd := exec.CommandContext(ctx, "docker", commands...)
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -37,7 +46,7 @@ func (h *ExecAccessHelper) access(
 		return err
 	}
 
-	err := cmd.Wait()
+	err = cmd.Wait()
 	if _, ok := err.(*exec.ExitError); ok {
 		// User may occur ExitError, but it's not needed to handle here.
 		return nil
