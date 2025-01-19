@@ -22,10 +22,12 @@ func (h *ExecAccessHelper) access(
 	ctx context.Context,
 	nodeDefinition containerlab.NodeDefinition,
 	containerDetails containerlab.ContainerDetails,
-	_isAdmin bool,
+	isAdmin bool,
 ) error {
 	execCommand := defaultExecCommand
-	if v, ok := nodeDefinition.Labels[execCommandKey]; ok {
+	if v, ok := nodeDefinition.Labels[execCommandForAdminKey]; ok && isAdmin {
+		execCommand = v
+	} else if v, ok := nodeDefinition.Labels[execCommandKey]; ok {
 		execCommand = v
 	}
 

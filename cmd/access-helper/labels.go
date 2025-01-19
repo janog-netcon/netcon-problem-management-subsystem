@@ -12,6 +12,10 @@ const (
 	// ref: https://uokada.hatenablog.jp/entry/2015/05/20/001208
 	defaultSSHPassword string = "clab@123"
 
+	defaultSSHPort uint16 = 22
+
+	defaultExecCommand = "sh"
+
 	// AccessMethodKey is the label key to specify the access method.
 	// The possible values are either "ssh" or "exec".
 	// With "ssh", access-helper will try to connect to the Node via SSH.
@@ -40,11 +44,10 @@ const (
 
 	// sshPortKey is the label key to specify port number for SSH access.
 	// The default value is defaultPort.
-	sshPortKey            = "netcon.janog.gr.jp/sshPort"
-	defaultSSHPort uint16 = 22
+	sshPortKey = "netcon.janog.gr.jp/sshPort"
 
 	// execCommandKey is the label key to specify command for exec access.
 	// The default value is defaultExecCommand.
-	execCommandKey     = "netcon.janog.gr.jp/execCommand"
-	defaultExecCommand = "sh"
+	execCommandKey         = "netcon.janog.gr.jp/execCommand"
+	execCommandForAdminKey = "netcon.janog.gr.jp/execCommandForAdmin"
 )
