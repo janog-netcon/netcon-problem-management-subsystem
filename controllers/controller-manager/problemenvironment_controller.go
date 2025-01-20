@@ -181,6 +181,11 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 			memoryUsedPercent = MAX_USED_PERCENT
 		}
 
+		// If resource usage is above 90%, it's too danger to deploy to this worker.
+		if cpuUsedPercent > 90.0 || memoryUsedPercent > 90.0 {
+			continue
+		}
+
 		arr = append(arr, WorkerResource{
 			Name:              workers.Items[i].Name,
 			Count:             count,
