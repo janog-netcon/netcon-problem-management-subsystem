@@ -228,9 +228,11 @@ func (r *SSHServer) Start(ctx context.Context) error {
 			log := log.FromContext(ctx)
 			if err := r.handlePasswordAuthentication(ctx, sctx, password); err != nil {
 				log.Info("ssh authentication failed", "remoteAddr", sctx.RemoteAddr().String(), "user", sctx.User(), "reason", err)
+				sshAuthTotalFailed.Inc()
 				return false
 			}
 			log.Info("ssh authentication successful", "remoteAddr", sctx.RemoteAddr().String(), "user", sctx.User())
+			sshAuthTotalSucceeded.Inc()
 			return true
 		},
 		Handler: func(s ssh.Session) {
@@ -239,6 +241,7 @@ func (r *SSHServer) Start(ctx context.Context) error {
 			defer func() {
 				duration := time.Since(start).Seconds()
 				log.Info("ssh session finished", "remoteAddr", s.RemoteAddr().String(), "user", s.User(), "durationSecond", duration)
+				sshSessionDuration.Observe(duration)
 			}()
 
 			r.handle(ctx, s)
