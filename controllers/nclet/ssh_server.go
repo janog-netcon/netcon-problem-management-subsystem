@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
@@ -150,35 +151,42 @@ func (r *SSHServer) injectHostKeys(server *ssh.Server) error {
 	return nil
 }
 
-func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) bool {
+func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) error {
 	user, err := parseUser(sCtx.User())
 	if err != nil {
-		return false
+		return errors.New("invalid user format")
 	}
 
 	if user.Admin {
-		return password == r.adminPassword
-	} else {
-		problemEnvironment := netconv1alpha1.ProblemEnvironment{}
-		if err := r.Get(ctx, types.NamespacedName{
-			Namespace: "netcon",
-			Name:      user.ProblemEnvironmentName,
-		}, &problemEnvironment); err != nil {
-			return false
+		if password != r.adminPassword {
+			return errors.New("invalid password")
 		}
-
-		if util.GetProblemEnvironmentCondition(
-			&problemEnvironment,
-			netconv1alpha1.ProblemEnvironmentConditionAssigned,
-		) != metav1.ConditionTrue {
-			return false
-		}
-
-		return password == problemEnvironment.Status.Password
+		return nil
 	}
+
+	problemEnvironment := netconv1alpha1.ProblemEnvironment{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: "netcon",
+		Name:      user.ProblemEnvironmentName,
+	}, &problemEnvironment); err != nil {
+		return errors.New("problem environment not found")
+	}
+
+	if util.GetProblemEnvironmentCondition(
+		&problemEnvironment,
+		netconv1alpha1.ProblemEnvironmentConditionAssigned,
+	) != metav1.ConditionTrue {
+		return errors.New("problem environment not assigned")
+	}
+
+	if password != problemEnvironment.Status.Password {
+		return errors.New("invalid password")
+	}
+
+	return nil
 }
 
-func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
+func (r *SSHServer) handle(_ context.Context, s ssh.Session) {
 	user, err := parseUser(s.User())
 	if err != nil {
 		return
@@ -217,10 +225,25 @@ func (r *SSHServer) Start(ctx context.Context) error {
 	server := &ssh.Server{
 		Addr: r.sshAddr,
 		PasswordHandler: func(sctx ssh.Context, password string) bool {
-			// TODO: Add logging
-			return r.handlePasswordAuthentication(ctx, sctx, password)
+			log := log.FromContext(ctx)
+			if err := r.handlePasswordAuthentication(ctx, sctx, password); err != nil {
+				log.Info("ssh authentication failed", "remoteAddr", sctx.RemoteAddr().String(), "user", sctx.User(), "reason", err)
+				sshAuthTotalFailed.Inc()
+				return false
+			}
+			log.Info("ssh authentication successful", "remoteAddr", sctx.RemoteAddr().String(), "user", sctx.User())
+			sshAuthTotalSucceeded.Inc()
+			return true
 		},
 		Handler: func(s ssh.Session) {
+			log := log.FromContext(ctx)
+			start := time.Now()
+			defer func() {
+				duration := time.Since(start).Seconds()
+				log.Info("ssh session finished", "remoteAddr", s.RemoteAddr().String(), "user", s.User(), "durationSecond", duration)
+				sshSessionDuration.Observe(duration)
+			}()
+
 			r.handle(ctx, s)
 		},
 	}
