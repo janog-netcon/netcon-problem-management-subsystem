@@ -225,22 +225,24 @@ func (r *SSHServer) Start(ctx context.Context) error {
 	server := &ssh.Server{
 		Addr: r.sshAddr,
 		PasswordHandler: func(sctx ssh.Context, password string) bool {
+			remoteAddr := strings.Split(sctx.RemoteAddr().String(), ":")[0]
 			log := log.FromContext(ctx)
 			if err := r.handlePasswordAuthentication(ctx, sctx, password); err != nil {
-				log.Info("ssh authentication failed", "remoteAddr", sctx.RemoteAddr().String(), "user", sctx.User(), "reason", err)
+				log.Info("ssh authentication failed", "remoteAddr", remoteAddr, "user", sctx.User(), "reason", err)
 				sshAuthTotalFailed.Inc()
 				return false
 			}
-			log.Info("ssh authentication successful", "remoteAddr", sctx.RemoteAddr().String(), "user", sctx.User())
+			log.Info("ssh authentication successful", "remoteAddr", remoteAddr, "user", sctx.User())
 			sshAuthTotalSucceeded.Inc()
 			return true
 		},
 		Handler: func(s ssh.Session) {
+			remoteAddr := strings.Split(s.RemoteAddr().String(), ":")[0]
 			log := log.FromContext(ctx)
 			start := time.Now()
 			defer func() {
 				duration := time.Since(start).Seconds()
-				log.Info("ssh session finished", "remoteAddr", s.RemoteAddr().String(), "user", s.User(), "durationSecond", duration)
+				log.Info("ssh session finished", "remoteAddr", remoteAddr, "user", s.User(), "durationSecond", duration)
 				sshSessionDuration.Observe(duration)
 			}()
 
