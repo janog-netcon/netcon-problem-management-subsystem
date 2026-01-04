@@ -213,7 +213,7 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 		return StatusError, nil
 	}
 
-	labData, err := clabClient.Inspect(ctx)
+	containers, err := clabClient.Inspect(ctx)
 	if err != nil {
 		log.Error(err, "failed to inspect ContainerLab")
 		return StatusError, nil
@@ -221,18 +221,16 @@ func (d *ContainerLabProblemEnvironmentDriver) Check(
 
 	containerPrefix := fmt.Sprintf("clab-%s-", problemEnvironment.Name)
 	containerStatuses := []netconv1alpha1.ContainerStatus{}
-	for i := range labData.Containers {
-		containerDetail := &labData.Containers[i]
-
-		name := strings.ReplaceAll(containerDetail.Name, containerPrefix, "")
+	for _, c := range containers {
+		name := strings.ReplaceAll(c.Name, containerPrefix, "")
 		containerStatus := netconv1alpha1.ContainerStatus{
 			Name:                name,
-			Image:               containerDetail.Image,
-			ContainerID:         containerDetail.ContainerID,
-			ManagementIPAddress: containerDetail.IPv4Address,
+			Image:               c.Image,
+			ContainerID:         c.ContainerID,
+			ManagementIPAddress: c.IPv4Address,
 		}
 
-		containerInfo, err := d.dockerClient.ContainerInspect(ctx, containerDetail.ContainerID)
+		containerInfo, err := d.dockerClient.ContainerInspect(ctx, c.ContainerID)
 		if err != nil {
 			log.Error(err, "failed to fetch container information from docker daemon")
 			containerStatuses = append(containerStatuses, containerStatus)

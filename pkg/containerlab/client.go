@@ -114,7 +114,7 @@ func (c *ContainerLabClient) Destroy(ctx context.Context) error {
 	return nil
 }
 
-func (c *ContainerLabClient) Inspect(ctx context.Context) (*LabData, error) {
+func (c *ContainerLabClient) Inspect(ctx context.Context) ([]ContainerDetails, error) {
 	cmd := exec.CommandContext(ctx,
 		"clab",
 		"-t", c.topologyFileName, "inspect", "-f", "json",
@@ -127,10 +127,15 @@ func (c *ContainerLabClient) Inspect(ctx context.Context) (*LabData, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	data := LabData{}
+	data := map[string][]ContainerDetails{}
 	if err := json.Unmarshal(stdout, &data); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return &data, nil
+	result := []ContainerDetails{}
+	for _, containers := range data {
+		result = append(result, containers...)
+	}
+
+	return result, nil
 }

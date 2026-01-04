@@ -103,7 +103,7 @@ func accessNode(
 		return nil
 	}
 
-	labData, err := client.Inspect(ctx)
+	containers, err := client.Inspect(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to inspect ContainerLab: %w", err)
 	}
@@ -121,10 +121,9 @@ func accessNode(
 	}
 	containerName := fmt.Sprintf("%s%s", prefix, nodeName)
 
-	for i := range labData.Containers {
-		container := &labData.Containers[i]
-		if container.Name == containerName {
-			containerDetails = container
+	for i, c := range containers {
+		if c.Name == containerName {
+			containerDetails = &containers[i]
 			break
 		}
 	}
