@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 \
     go build -o access-helper ./cmd/access-helper
 
 # Build the containerlab binary
-FROM golang:1.23 as containerlab_builder
+FROM golang:1.24 as containerlab_builder
 
 WORKDIR /workspace
 COPY containerlab/go.mod go.mod
