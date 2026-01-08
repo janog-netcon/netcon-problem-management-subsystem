@@ -7,7 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.11
 	github.com/kr/logfmt v0.0.0-20210122060352-19f9bcb100e6
 	github.com/onsi/ginkgo/v2 v2.13.0
-	github.com/onsi/gomega v1.29.0
+	github.com/onsi/gomega v1.39.0
 	github.com/shirou/gopsutil/v3 v3.22.10
 	k8s.io/api v0.29.1
 	k8s.io/apimachinery v0.29.1
