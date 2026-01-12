@@ -20,8 +20,8 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.45.0
-	golang.org/x/sys v0.39.0
-	golang.org/x/term v0.37.0
+	golang.org/x/sys v0.40.0
+	golang.org/x/term v0.39.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.29.1
 	k8s.io/apimachinery v0.29.1
