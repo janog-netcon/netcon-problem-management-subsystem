@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/google/shlex"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/internal/tracing"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
 )
 
@@ -18,7 +19,7 @@ const AccessMethodExec AccessMethod = "exec"
 
 type ExecAccessHelper struct{}
 
-func (h *ExecAccessHelper) access(
+func (h *ExecAccessHelper) _access(
 	ctx context.Context,
 	nodeDefinition containerlab.NodeDefinition,
 	containerDetails containerlab.ContainerDetails,
@@ -45,14 +46,33 @@ func (h *ExecAccessHelper) access(
 	cmd.Stdin = os.Stdin
 
 	if err := cmd.Start(); err != nil {
-		return err
+		return fmt.Errorf("failed to start command: %w", err)
 	}
 
 	err = cmd.Wait()
-	if _, ok := err.(*exec.ExitError); ok {
-		// User may occur ExitError, but it's not needed to handle here.
-		return nil
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			// User may occur ExitError, but it's not needed to handle here.
+			return nil
+		}
+		return fmt.Errorf("failed to wait command: %w", err)
 	}
 
-	return err
+	return nil
+}
+
+func (h *ExecAccessHelper) access(
+	ctx context.Context,
+	nodeDefinition containerlab.NodeDefinition,
+	containerDetails containerlab.ContainerDetails,
+	isAdmin bool,
+) error {
+	ctx, span := tracing.Tracer.Start(ctx, "ExecAccessHelper#access")
+	defer span.End()
+
+	if err := h._access(ctx, nodeDefinition, containerDetails, isAdmin); err != nil {
+		return tracing.WrapError(span, err, "failed to access node via exec")
+	}
+
+	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/janog-netcon/netcon-problem-management-subsystem/internal/tracing"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
@@ -213,9 +214,12 @@ func (h *SSHAccessHelper) access(
 	containerDetails containerlab.ContainerDetails,
 	isAdmin bool,
 ) error {
+	ctx, span := tracing.Tracer.Start(ctx, "SSHAccessHelper#access")
+	defer span.End()
+
 	_, err := h._access(ctx, nodeDefinition, containerDetails, isAdmin)
 	if err != nil {
-		return err
+		return tracing.WrapError(span, err, "failed to access node via SSH")
 	}
 
 	return nil
