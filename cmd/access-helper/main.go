@@ -14,12 +14,22 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/term"
 
+	"github.com/janog-netcon/netcon-problem-management-subsystem/internal/tracing"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/containerlab"
 )
 
-func askUserForNode(config *containerlab.Config, isAdmin bool) string {
+const internalErrorMessage = "Internal error occured. Please contact NETCON members with Session ID and Trace ID."
+
+func askUserForNode(ctx context.Context, config *containerlab.Config, isAdmin bool) string {
+	ctx, span := tracing.Tracer.Start(ctx, "askUserForNode")
+	defer span.End()
+
 	nodeNames := []string{}
 	for nodeName, nodeDefinition := range config.Topology.Nodes {
 		if nodeDefinition.Labels[AdminOnlyKey] == "true" && !isAdmin {
@@ -91,21 +101,33 @@ func accessNode(
 	nodeName string,
 	isAdmin bool,
 ) error {
+	ctx, span := tracing.Tracer.Start(
+		ctx, "accessNode",
+		trace.WithAttributes(
+			attribute.String("access.node", nodeName),
+		),
+	)
+	defer span.End()
+
 	nodeDefinition, ok := config.Topology.Nodes[nodeName]
 	if !ok || nodeDefinition == nil {
-		fmt.Printf("no such node: \"%s\"", nodeName)
+		span.AddEvent("specified node doesn't exist")
+		fmt.Printf("no such node: \"%s\"\n", nodeName)
 		return nil
 	}
 
 	// if adminOnly is "true", normal user can't access such node
 	if nodeDefinition.Labels[AdminOnlyKey] == "true" && !isAdmin {
-		fmt.Printf("no such node: \"%s\"", nodeName)
+		span.AddEvent("specified node is not permitted to access by participants")
+		fmt.Printf("no such node: \"%s\"\n", nodeName)
 		return nil
 	}
 
 	containers, err := client.Inspect(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to inspect ContainerLab: %w", err)
+		tracing.SetError(span, fmt.Errorf("failed to inspect Containerlab: %w", err))
+		fmt.Println(internalErrorMessage)
+		return nil
 	}
 
 	var containerDetails *containerlab.ContainerDetails = nil
@@ -129,7 +151,9 @@ func accessNode(
 	}
 
 	if containerDetails == nil {
-		return errors.New("node defined, but not working")
+		tracing.SetError(span, fmt.Errorf("node defined, but not working"))
+		fmt.Println(internalErrorMessage)
+		return nil
 	}
 
 	accessMethod := AccessMethodSSH
@@ -138,15 +162,70 @@ func accessNode(
 	}
 
 	if helper := findAccessHelper(accessMethod); helper != nil {
-		return helper.access(ctx, *nodeDefinition, *containerDetails, isAdmin)
+		if err := helper.access(ctx, *nodeDefinition, *containerDetails, isAdmin); err != nil {
+			return tracing.WrapError(span, err, "failed to access node")
+		}
+		return nil
 	}
 
-	return errors.New(fmt.Sprintf("no such method: %s", accessMethod))
+	tracing.SetError(span, fmt.Errorf("no such access method: %s", accessMethod))
+	fmt.Println(internalErrorMessage)
+	return nil
+}
+
+func run(ctx context.Context, topologyFilePath string, isAdmin bool, args []string) error {
+	span := trace.SpanFromContext(ctx)
+
+	// access-helper requires stdin bound to terminal
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		tracing.SetError(span, fmt.Errorf("stdin is not bound to terminal"))
+		fmt.Println(internalErrorMessage)
+		return nil
+	}
+
+	topologyFilePath, err := filepath.Abs(topologyFilePath)
+	if err != nil {
+		tracing.SetError(span, fmt.Errorf("failed to resolve path to the topology file: %w", err))
+		fmt.Println(internalErrorMessage)
+		return nil
+	}
+
+	client := containerlab.NewContainerLabClient(topologyFilePath)
+	config, err := client.LoadTopologyFile()
+	if err != nil {
+		tracing.SetError(span, fmt.Errorf("failed to load topology file: %w", err))
+		fmt.Println(internalErrorMessage)
+		return nil
+	}
+
+	if len(args) == 1 { // if nodeName is specified
+		if err := accessNode(ctx, client, config, args[0], isAdmin); err != nil {
+			tracing.SetError(span, fmt.Errorf("failed to access node: %w", err))
+			fmt.Println(internalErrorMessage)
+			return nil
+		}
+	} else {
+		for {
+			nodeName := askUserForNode(ctx, config, isAdmin)
+			if nodeName == "" {
+				return nil
+			}
+			if err := accessNode(ctx, client, config, nodeName, isAdmin); err != nil {
+				tracing.SetError(span, fmt.Errorf("failed to access node: %w", err))
+				fmt.Println(internalErrorMessage)
+			}
+		}
+	}
+
+	return nil
 }
 
 func main() {
-	var topologyFilePath string
-	var isAdmin bool
+	var (
+		topologyFilePath    string
+		isAdmin             bool
+		enableOpenTelemetry bool
+	)
 
 	cmd := cobra.Command{
 		Use: path.Base(os.Args[0]),
@@ -159,38 +238,30 @@ func main() {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			// access-helper requires stdin bound to terminal
-			if !term.IsTerminal(0) {
-				return errors.New("stdin is not bound to terminal")
-			}
-
-			topologyFilePath, err := filepath.Abs(topologyFilePath)
-			if err != nil {
-				fmt.Printf("failed to resolve path to the topology file: %v", err)
-				return nil
-			}
-
-			client := containerlab.NewContainerLabClient(topologyFilePath)
-			config, err := client.LoadTopologyFile()
-			if err != nil {
-				fmt.Printf("failed to load topology file: %v\n", err)
-				return nil
-			}
-
-			if len(args) == 1 { // if nodeName is specified
-				if err := accessNode(ctx, client, config, args[0], isAdmin); err != nil {
-					fmt.Printf("failed to access node: %v\n", err)
+			if enableOpenTelemetry {
+				shutdown, err := tracing.SetupOpenTelemetry(ctx, "access-helper")
+				if err != nil {
+					return fmt.Errorf("failed to setup OpenTelemetry: %w", err)
 				}
-			} else {
-				for {
-					nodeName := askUserForNode(config, isAdmin)
-					if nodeName == "" {
-						return nil
-					}
-					if err := accessNode(ctx, client, config, nodeName, isAdmin); err != nil {
-						fmt.Printf("failed to access node: %v\n", err)
-					}
-				}
+				defer shutdown(ctx)
+
+				carrier := tracing.EnvCarrier{}
+				ctx = otel.GetTextMapPropagator().Extract(ctx, carrier)
+			}
+
+			ctx, span := tracing.Tracer.Start(
+				ctx, "Run",
+				trace.WithAttributes(
+					attribute.String("access.topology.path", topologyFilePath),
+					attribute.Bool("access.admin", isAdmin),
+				),
+			)
+			defer span.End()
+
+			if err := run(ctx, topologyFilePath, isAdmin, args); err != nil {
+				span.SetStatus(codes.Error, "failed to run access-helper")
+				span.RecordError(err)
+				return err
 			}
 
 			return nil
@@ -199,6 +270,7 @@ func main() {
 
 	cmd.PersistentFlags().StringVarP(&topologyFilePath, "topo", "t", "", "path to the topology file")
 	cmd.PersistentFlags().BoolVar(&isAdmin, "admin", false, "whether access user is admin or not")
+	cmd.PersistentFlags().BoolVar(&enableOpenTelemetry, "enable-otel", false, "enable OpenTelemetry")
 
 	if err := cmd.ExecuteContext(context.Background()); err != nil {
 		os.Exit(1)

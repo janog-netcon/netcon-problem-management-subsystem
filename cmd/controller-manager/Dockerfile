@@ -16,6 +16,7 @@ COPY api/ api/
 COPY cmd/controller-manager cmd/controller-manager
 COPY controllers/controller-manager controllers/controller-manager
 COPY pkg/ pkg/
+COPY internal/ internal/
 
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o manager ./cmd/controller-manager

@@ -14,6 +14,7 @@ COPY api/ api/
 COPY cmd/nclet cmd/nclet
 COPY controllers/nclet controllers/nclet
 COPY pkg/ pkg/
+COPY internal/ internal/
 
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o nclet ./cmd/nclet
@@ -30,6 +31,7 @@ RUN go mod download
 COPY api/ api/
 COPY cmd/access-helper cmd/access-helper
 COPY pkg/ pkg/
+COPY internal/ internal/
 
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 \

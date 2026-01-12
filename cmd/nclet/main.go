@@ -42,6 +42,7 @@ import (
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
 	controllers "github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/controllers/nclet/drivers"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/internal/tracing"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/crypto"
 	//+kubebuilder:scaffold:imports
 )
@@ -72,6 +73,8 @@ func init() {
 }
 
 func main() {
+	ctx := ctrl.SetupSignalHandler()
+
 	controllers.RegisterMetrics(metrics.Registry)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
@@ -95,6 +98,13 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	shutdown, err := tracing.SetupOpenTelemetry(ctx, "nclet")
+	if err != nil {
+		setupLog.Error(err, "failed to setup OpenTelemetry")
+		os.Exit(1)
+	}
+	defer shutdown(ctx)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
@@ -199,7 +209,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
