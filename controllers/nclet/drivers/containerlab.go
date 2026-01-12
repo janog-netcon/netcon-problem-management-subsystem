@@ -12,7 +12,7 @@ import (
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/network"
 	dockerClient "github.com/docker/docker/client"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
