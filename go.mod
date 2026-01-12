@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/creack/pty v1.1.21
-	github.com/docker/docker v25.0.6+incompatible
+	github.com/docker/docker v25.0.13+incompatible
 	github.com/fatih/color v1.16.0
 	github.com/gliderlabs/ssh v0.3.7
 	github.com/go-chi/chi/v5 v5.0.11
