@@ -3,7 +3,7 @@ module github.com/janog-netcon/netcon-problem-management-subsystem
 go 1.25
 
 require (
-	github.com/creack/pty v1.1.21
+	github.com/creack/pty v1.1.24
 	github.com/docker/docker v25.0.13+incompatible
 	github.com/fatih/color v1.16.0
 	github.com/gliderlabs/ssh v0.3.7
