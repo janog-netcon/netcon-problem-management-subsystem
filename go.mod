@@ -6,7 +6,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/docker/docker v25.0.13+incompatible
 	github.com/fatih/color v1.16.0
-	github.com/gliderlabs/ssh v0.3.7
+	github.com/gliderlabs/ssh v0.3.8
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-logr/logr v1.4.3
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
