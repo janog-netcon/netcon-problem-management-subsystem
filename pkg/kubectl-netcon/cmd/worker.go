@@ -64,11 +64,13 @@ func newWorkerListCmd() *cobra.Command {
 				printOptions.Wide = true
 			}
 
-			printers.PrintObject(
+			if err := printers.PrintObject(
 				os.Stdout,
 				workerList,
 				printOptions,
-			)
+			); err != nil {
+				return err
+			}
 
 			return nil
 		},

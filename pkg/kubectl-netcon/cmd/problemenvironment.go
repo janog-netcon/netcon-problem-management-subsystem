@@ -71,11 +71,13 @@ func newProblemEnvironmentListCmd() *cobra.Command {
 				printOptions.Wide = true
 			}
 
-			printers.PrintObject(
+			if err := printers.PrintObject(
 				os.Stdout,
 				problemEnvironmentList,
 				printOptions,
-			)
+			); err != nil {
+				return err
+			}
 
 			return nil
 		},
