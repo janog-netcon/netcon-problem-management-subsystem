@@ -9,9 +9,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestGenerateTableForProblemEnvironmentList(t *testing.T) {
-	// Create a sample ProblemEnvironmentList with test data
-	peList := &v1alpha1.ProblemEnvironmentList{
+// createTestProblemEnvironmentList creates a sample ProblemEnvironmentList for testing
+func createTestProblemEnvironmentList() *v1alpha1.ProblemEnvironmentList {
+	return &v1alpha1.ProblemEnvironmentList{
 		Items: []v1alpha1.ProblemEnvironment{
 			{
 				ObjectMeta: metav1.ObjectMeta{
@@ -71,6 +71,10 @@ func TestGenerateTableForProblemEnvironmentList(t *testing.T) {
 			},
 		},
 	}
+}
+
+func TestGenerateTableForProblemEnvironmentList(t *testing.T) {
+	peList := createTestProblemEnvironmentList()
 
 	// Generate table
 	table, err := generateTableForProblemEnvironmentList(peList, GenerateOptions{})
@@ -97,67 +101,7 @@ func TestGenerateTableForProblemEnvironmentList(t *testing.T) {
 }
 
 func TestPrintProblemEnvironmentList(t *testing.T) {
-	// Create a sample ProblemEnvironmentList with test data
-	peList := &v1alpha1.ProblemEnvironmentList{
-		Items: []v1alpha1.ProblemEnvironment{
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "pe1",
-				},
-				Spec: v1alpha1.ProblemEnvironmentSpec{
-					WorkerName: "worker1",
-				},
-				Status: v1alpha1.ProblemEnvironmentStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   string(v1alpha1.ProblemEnvironmentConditionScheduled),
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   string(v1alpha1.ProblemEnvironmentConditionDeployed),
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   string(v1alpha1.ProblemEnvironmentConditionReady),
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   string(v1alpha1.ProblemEnvironmentConditionAssigned),
-							Status: metav1.ConditionFalse,
-						},
-					},
-				},
-			},
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "pe2",
-				},
-				Spec: v1alpha1.ProblemEnvironmentSpec{
-					WorkerName: "worker2",
-				},
-				Status: v1alpha1.ProblemEnvironmentStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   string(v1alpha1.ProblemEnvironmentConditionScheduled),
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   string(v1alpha1.ProblemEnvironmentConditionDeployed),
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   string(v1alpha1.ProblemEnvironmentConditionReady),
-							Status: metav1.ConditionTrue,
-						},
-						{
-							Type:   string(v1alpha1.ProblemEnvironmentConditionAssigned),
-							Status: metav1.ConditionTrue,
-						},
-					},
-				},
-			},
-		},
-	}
+	peList := createTestProblemEnvironmentList()
 
 	// Print the list
 	var buf bytes.Buffer
