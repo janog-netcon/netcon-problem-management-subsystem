@@ -195,19 +195,18 @@ func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.C
 	return nil
 }
 
-func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
-	// Reject SSH sessions with command arguments - only interactive shells are supported
+func (r *SSHServer) handle(ctx context.Context, s ssh.Session) error {
+	span := tracing.SpanFromContext(ctx)
+
 	if s.RawCommand() != "" {
-		fmt.Fprintln(s.Stderr(), "Error: Command execution is not supported. Please connect without specifying a command.")
-		s.Exit(1)
-		return
+		return tracing.GenerateError(span, "command execution is not supported")
 	}
 
 	otlpEndpoint := os.Getenv(tracing.OTLPEndpointKey)
 
 	user, err := parseUser(s.User())
 	if err != nil {
-		return
+		return tracing.GenerateError(span, "invalid user format")
 	}
 
 	topologyFilePath := path.Join("data", user.ProblemEnvironmentName, "manifest.yml")
@@ -237,7 +236,7 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
-		return
+		return tracing.WrapError(span, err, "failed to start pty")
 	}
 
 	// TODO: handle terminal resize
@@ -246,6 +245,8 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
 	_, _ = io.Copy(s, ptmx)
 
 	s.Close()
+
+	return nil
 }
 
 func (r *SSHServer) Start(ctx context.Context) error {
@@ -283,13 +284,24 @@ func (r *SSHServer) Start(ctx context.Context) error {
 			log := log.FromContext(ctx)
 
 			start := time.Now()
-			defer func() {
-				duration := time.Since(start).Seconds()
-				log.Info("ssh session finished", "remoteAddr", remoteAddr, "user", s.User(), "durationSecond", duration)
-				sshSessionDuration.Observe(duration)
-			}()
 
-			r.handle(ctx, s)
+			if err := r.handle(ctx, s); err != nil {
+				fmt.Fprintf(s, "Internal error occured. Please contact NETCON members with Session ID and Trace ID.\n")
+
+				msg := "SSH session finished with error"
+				duration := time.Since(start).Seconds()
+				log.Info(msg, "remoteAddr", remoteAddr, "user", s.User(), "durationSecond", duration, "reason", err)
+				span.RecordError(err)
+				span.SetStatus(codes.Error, msg)
+				sshSessionDuration.Observe(duration)
+				return
+			}
+
+			msg := "SSH session finished successfully"
+			duration := time.Since(start).Seconds()
+			log.Info(msg, "remoteAddr", remoteAddr, "user", s.User(), "durationSecond", duration)
+			span.AddEvent(msg)
+			sshSessionDuration.Observe(duration)
 		},
 	}
 
