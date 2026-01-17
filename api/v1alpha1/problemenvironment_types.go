@@ -59,6 +59,9 @@ type ProblemEnvironmentSpec struct {
 	ConfigFiles []FileSource `json:"configFiles,omitempty" yaml:"configFiles,omitempty"`
 
 	WorkerName string `json:"workerName,omitempty" yaml:"workername,omitempty"`
+
+	// +optional
+	WorkerSelectors []metav1.LabelSelector `json:"workerSelectors,omitempty" yaml:"workerSelectors,omitempty"`
 }
 
 type FileSource struct {

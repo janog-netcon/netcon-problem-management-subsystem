@@ -31,6 +31,8 @@ type HeartbeatAgent struct {
 
 	// workerName is the name of Worker that nclet runs on
 	workerName string
+	// workerClass is the class of Worker that nclet runs on
+	workerClass string
 
 	// workerName is the name of Worker that nclet runs on
 	externalIPAddr string
@@ -43,10 +45,11 @@ type HeartbeatAgent struct {
 	memUsedHistory [MEM_USED_HISTORY_SIZE]float64
 }
 
-func NewHeartbeatAgent(client client.Client, workerName string, externalIPaddr string, externalPort uint16, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
+func NewHeartbeatAgent(client client.Client, workerName string, workerClass string, externalIPaddr string, externalPort uint16, heartbeatInterval time.Duration, statusUpdateInterval time.Duration) *HeartbeatAgent {
 	return &HeartbeatAgent{
 		Client:             client,
 		workerName:         workerName,
+		workerClass:        workerClass,
 		externalIPAddr:     externalIPaddr,
 		externalPort:       externalPort,
 		heartbeatTicker:    time.NewTicker(heartbeatInterval),
@@ -74,6 +77,11 @@ func (a *HeartbeatAgent) Start(ctx context.Context) error {
 	}
 
 	if _, err := ctrl.CreateOrUpdate(ctx, a, &worker, func() error {
+		if worker.Labels == nil {
+			worker.Labels = map[string]string{}
+		}
+		worker.Labels["netcon.janog.gr.jp/workerName"] = a.workerName
+		worker.Labels["netcon.janog.gr.jp/workerClass"] = a.workerClass
 		return nil
 	}); err != nil {
 		return err

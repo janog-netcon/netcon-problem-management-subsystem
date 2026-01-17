@@ -25,6 +25,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -118,6 +119,7 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 func (r *ProblemEnvironmentReconciler) electWorker(
 	ctx context.Context,
 	workers netconv1alpha1.WorkerList,
+	workerSelectors []metav1.LabelSelector,
 ) string {
 	log := log.FromContext(ctx)
 
@@ -164,6 +166,25 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 			continue
 		}
 
+		// check if worker matches workerSelectors
+		if len(workerSelectors) > 0 {
+			matched := false
+			for _, selector := range workerSelectors {
+				s, err := metav1.LabelSelectorAsSelector(&selector)
+				if err != nil {
+					log.Error(err, "failed to parse label selector")
+					continue
+				}
+				if s.Matches(labels.Set(workers.Items[i].Labels)) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
+		}
+
 		count, ok := workerCounterMap[workers.Items[i].Name]
 		if !ok {
 			count = 0
@@ -198,8 +219,8 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 		return ""
 	}
 	sort.Slice(arr, func(i, j int) bool {
-		scoreI := max(arr[i].CPUUsedPercent, 1.1 * arr[i].MemoryUsedPercent)
-		scoreJ := max(arr[j].CPUUsedPercent, 1.1 * arr[j].MemoryUsedPercent)
+		scoreI := max(arr[i].CPUUsedPercent, 1.1*arr[i].MemoryUsedPercent)
+		scoreJ := max(arr[j].CPUUsedPercent, 1.1*arr[j].MemoryUsedPercent)
 		return scoreI < scoreJ
 	})
 
@@ -229,7 +250,7 @@ func (r *ProblemEnvironmentReconciler) schedule(
 		return r.updateStatus(ctx, problemEnvironment, ctrl.Result{RequeueAfter: 3 * time.Second})
 	}
 
-	electedWorkerName := r.electWorker(ctx, workers)
+	electedWorkerName := r.electWorker(ctx, workers, problemEnvironment.Spec.WorkerSelectors)
 
 	if electedWorkerName != "" {
 		problemEnvironment.Spec.WorkerName = electedWorkerName
