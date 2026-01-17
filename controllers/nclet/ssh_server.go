@@ -196,6 +196,13 @@ func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.C
 }
 
 func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
+	// Reject SSH sessions with command arguments - only interactive shells are supported
+	if s.RawCommand() != "" {
+		fmt.Fprintln(s.Stderr(), "Error: Command execution is not supported. Please connect without specifying a command.")
+		s.Exit(1)
+		return
+	}
+
 	otlpEndpoint := os.Getenv(tracing.OTLPEndpointKey)
 
 	user, err := parseUser(s.User())
