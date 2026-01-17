@@ -62,6 +62,8 @@ var (
 	heartbeatInterval    string
 	statusUpdateInterval string
 
+	workerClass string
+
 	maxWorkers int
 )
 
@@ -83,6 +85,8 @@ func main() {
 
 	flag.StringVar(&adminPass, "admin-password", "", "The address SSH server binds to.")
 
+	flag.StringVar(&workerClass, "worker-class", "", "Class of the Worker")
+
 	flag.StringVar(&heartbeatInterval, "heartbeat-interval", "1s", "Heartbeat interval")
 	flag.StringVar(&statusUpdateInterval, "status-update-interval", "10s", "Status update interval")
 
@@ -95,6 +99,11 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	if workerClass == "" {
+		setupLog.Error(fmt.Errorf("worker-class is required"), "worker-class is required")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
@@ -181,6 +190,7 @@ func main() {
 	if err = mgr.Add(controllers.NewHeartbeatAgent(
 		mgr.GetClient(),
 		workerName,
+		workerClass,
 		externalIPAddr,
 		uint16(sshPort),
 		heartbeatInterval,

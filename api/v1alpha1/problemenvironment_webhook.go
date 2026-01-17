@@ -61,6 +61,10 @@ func (r *ProblemEnvironment) ValidateUpdate(old runtime.Object) (admission.Warni
 		return nil, fmt.Errorf(".spec.containerLabManifest: containerLabManifest can't be updated")
 	}
 
+	if !reflect.DeepEqual(r.Spec.WorkerSelectors, or.Spec.WorkerSelectors) {
+		return nil, fmt.Errorf(".spec.workerSelectors: workerSelectors can't be updated")
+	}
+
 	return nil, nil
 }
 

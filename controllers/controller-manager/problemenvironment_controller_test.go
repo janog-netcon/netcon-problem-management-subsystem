@@ -487,4 +487,161 @@ var _ = Describe("ProblemEnvironment controller", func() {
 			return nil
 		}).ShouldNot(HaveOccurred())
 	})
+
+	Describe("with WorkerSelectors", func() {
+		It("should schedule ProblemEnvironment to the worker which matches workerSelectors", func() {
+			worker001 := netconv1alpha1.Worker{}
+			worker001.Name = "worker-001"
+			worker001.Labels = map[string]string{"class": "foo"}
+
+			worker002 := netconv1alpha1.Worker{}
+			worker002.Name = "worker-002"
+			worker002.Labels = map[string]string{"class": "bar"}
+
+			problemEnvironment := netconv1alpha1.ProblemEnvironment{}
+			err := loadManifest(
+				filepath.Join("tests", "problemenvironments", "problemenvironment-tst-002.yaml"),
+				&problemEnvironment,
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Add WorkerSelectors
+			problemEnvironment.Spec.WorkerSelectors = []metav1.LabelSelector{
+				{
+					MatchLabels: map[string]string{"class": "bar"},
+				},
+			}
+
+			namespace := problemEnvironment.Namespace
+			name := problemEnvironment.Name
+
+			err = k8sClient.Create(ctx, &worker001)
+			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(100 * time.Millisecond)
+
+			err = k8sClient.Create(ctx, &worker002)
+			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(100 * time.Millisecond)
+
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-001"}, &worker001)
+			Expect(err).NotTo(HaveOccurred())
+			util.SetWorkerCondition(
+				&worker001,
+				netconv1alpha1.WorkerConditionReady,
+				metav1.ConditionTrue,
+				"Test", "test",
+			)
+			worker001.Status.WorkerInfo.CPUUsedPercent = "10.0"
+			worker001.Status.WorkerInfo.MemoryUsedPercent = "30.0"
+			err = k8sClient.Status().Update(ctx, &worker001)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-002"}, &worker002)
+			Expect(err).NotTo(HaveOccurred())
+			util.SetWorkerCondition(
+				&worker002,
+				netconv1alpha1.WorkerConditionReady,
+				metav1.ConditionTrue,
+				"Test", "test",
+			)
+			worker002.Status.WorkerInfo.CPUUsedPercent = "5.0"
+			worker002.Status.WorkerInfo.MemoryUsedPercent = "10.0"
+			err = k8sClient.Status().Update(ctx, &worker002)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = k8sClient.Create(ctx, &problemEnvironment)
+			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(100 * time.Millisecond)
+
+			Eventually(func() error {
+				problemEnvironment := netconv1alpha1.ProblemEnvironment{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      name,
+				}, &problemEnvironment); err != nil {
+					return err
+				}
+
+				if problemEnvironment.Spec.WorkerName != "worker-002" {
+					return fmt.Errorf("invalid scheduling: expected worker-002, got %s", problemEnvironment.Spec.WorkerName)
+				}
+
+				if util.GetProblemEnvironmentCondition(
+					&problemEnvironment,
+					netconv1alpha1.ProblemEnvironmentConditionScheduled,
+				) != metav1.ConditionTrue {
+					return fmt.Errorf("failed to confirm schedule")
+				}
+
+				return nil
+			}).ShouldNot(HaveOccurred())
+		})
+
+		It("should not schedule ProblemEnvironment if no worker matches workerSelectors", func() {
+			worker001 := netconv1alpha1.Worker{}
+			worker001.Name = "worker-001"
+			worker001.Labels = map[string]string{"class": "foo"}
+
+			problemEnvironment := netconv1alpha1.ProblemEnvironment{}
+			err := loadManifest(
+				filepath.Join("tests", "problemenvironments", "problemenvironment-tst-002.yaml"),
+				&problemEnvironment,
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Add WorkerSelectors
+			problemEnvironment.Spec.WorkerSelectors = []metav1.LabelSelector{
+				{
+					MatchLabels: map[string]string{"class": "bar"},
+				},
+			}
+
+			namespace := problemEnvironment.Namespace
+			name := problemEnvironment.Name
+
+			err = k8sClient.Create(ctx, &worker001)
+			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(100 * time.Millisecond)
+
+			err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-001"}, &worker001)
+			Expect(err).NotTo(HaveOccurred())
+			util.SetWorkerCondition(
+				&worker001,
+				netconv1alpha1.WorkerConditionReady,
+				metav1.ConditionTrue,
+				"Test", "test",
+			)
+			worker001.Status.WorkerInfo.CPUUsedPercent = "10.0"
+			worker001.Status.WorkerInfo.MemoryUsedPercent = "30.0"
+			err = k8sClient.Status().Update(ctx, &worker001)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = k8sClient.Create(ctx, &problemEnvironment)
+			Expect(err).NotTo(HaveOccurred())
+			time.Sleep(100 * time.Millisecond)
+
+			Consistently(func() error {
+				problemEnvironment := netconv1alpha1.ProblemEnvironment{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      name,
+				}, &problemEnvironment); err != nil {
+					return err
+				}
+
+				if problemEnvironment.Spec.WorkerName != "" {
+					return fmt.Errorf("should not be scheduled, but got %s", problemEnvironment.Spec.WorkerName)
+				}
+
+				if util.GetProblemEnvironmentCondition(
+					&problemEnvironment,
+					netconv1alpha1.ProblemEnvironmentConditionScheduled,
+				) != metav1.ConditionFalse {
+					return fmt.Errorf("failed to confirm schedule condition")
+				}
+
+				return nil
+			}, 3*time.Second, 100*time.Millisecond).Should(Succeed())
+		})
+	})
 })
