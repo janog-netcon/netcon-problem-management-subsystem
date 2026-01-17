@@ -14,6 +14,7 @@ COPY api/ api/
 COPY cmd/gateway cmd/gateway
 COPY controllers/gateway controllers/gateway
 COPY pkg/ pkg/
+COPY internal/ internal/
 
 # Build
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 go build -o gateway ./cmd/gateway

@@ -12,10 +12,12 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/creack/pty"
-	"github.com/gliderlabs/ssh"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -27,6 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	netconv1alpha1 "github.com/janog-netcon/netcon-problem-management-subsystem/api/v1alpha1"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/internal/ssh"
+	"github.com/janog-netcon/netcon-problem-management-subsystem/internal/tracing"
 	"github.com/janog-netcon/netcon-problem-management-subsystem/pkg/util"
 )
 
@@ -152,17 +156,22 @@ func (r *SSHServer) injectHostKeys(server *ssh.Server) error {
 }
 
 func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.Context, password string) error {
+	span := tracing.SpanFromContext(ctx)
+
 	user, err := parseUser(sCtx.User())
 	if err != nil {
 		return errors.New("invalid user format")
 	}
 
 	if user.Admin {
+		span.AddEvent("SSH request from admin received")
 		if password != r.adminPassword {
 			return errors.New("invalid password")
 		}
 		return nil
 	}
+
+	span.AddEvent("SSH request from participants received")
 
 	problemEnvironment := netconv1alpha1.ProblemEnvironment{}
 	if err := r.Get(ctx, types.NamespacedName{
@@ -186,7 +195,9 @@ func (r *SSHServer) handlePasswordAuthentication(ctx context.Context, sCtx ssh.C
 	return nil
 }
 
-func (r *SSHServer) handle(_ context.Context, s ssh.Session) {
+func (r *SSHServer) handle(ctx context.Context, s ssh.Session) {
+	otlpEndpoint := os.Getenv(tracing.OTLPEndpointKey)
+
 	user, err := parseUser(s.User())
 	if err != nil {
 		return
@@ -199,12 +210,23 @@ func (r *SSHServer) handle(_ context.Context, s ssh.Session) {
 	if user.Admin {
 		args = append(args, "--admin")
 	}
+	if otlpEndpoint != "" {
+		args = append(args, "--enable-otel")
+	}
 
 	if user.NodeName != "" {
 		args = append(args, user.NodeName)
 	}
 
 	cmd := exec.Command("access-helper", args...)
+
+	if otlpEndpoint != "" {
+		cmd.Env = append(syscall.Environ(), fmt.Sprintf("%s=%s", tracing.OTLPEndpointKey, otlpEndpoint))
+
+		carrier := tracing.EnvCarrier{}
+		otel.GetTextMapPropagator().Inject(ctx, carrier)
+		carrier.InjectToCmd(cmd)
+	}
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
@@ -225,20 +247,34 @@ func (r *SSHServer) Start(ctx context.Context) error {
 	server := &ssh.Server{
 		Addr: r.sshAddr,
 		PasswordHandler: func(sctx ssh.Context, password string) bool {
+			ctx, span := tracing.Tracer.Start(sctx, "Server#PasswordHandler")
+			defer span.End()
+
 			remoteAddr := strings.Split(sctx.RemoteAddr().String(), ":")[0]
 			log := log.FromContext(ctx)
+
 			if err := r.handlePasswordAuthentication(ctx, sctx, password); err != nil {
-				log.Info("ssh authentication failed", "remoteAddr", remoteAddr, "user", sctx.User(), "reason", err)
+				msg := "SSH authentication failed"
+				log.Info(msg, "remoteAddr", remoteAddr, "user", sctx.User(), "reason", err)
+				span.RecordError(err)
+				span.SetStatus(codes.Error, msg)
 				sshAuthTotalFailed.Inc()
 				return false
 			}
-			log.Info("ssh authentication successful", "remoteAddr", remoteAddr, "user", sctx.User())
+
+			msg := "SSH authentication succeeded"
+			log.Info(msg, "remoteAddr", remoteAddr, "user", sctx.User())
+			span.AddEvent(msg)
 			sshAuthTotalSucceeded.Inc()
 			return true
 		},
 		Handler: func(s ssh.Session) {
+			ctx, span := tracing.Tracer.Start(s.Context(), "Server#Handler")
+			defer span.End()
+
 			remoteAddr := strings.Split(s.RemoteAddr().String(), ":")[0]
 			log := log.FromContext(ctx)
+
 			start := time.Now()
 			defer func() {
 				duration := time.Since(start).Seconds()
