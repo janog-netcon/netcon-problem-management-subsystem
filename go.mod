@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be
 	github.com/creack/pty v1.1.24
-	github.com/docker/docker v25.0.13+incompatible
+	github.com/docker/docker v25.0.14+incompatible
 	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi/v5 v5.2.4
 	github.com/go-logr/logr v1.4.3
