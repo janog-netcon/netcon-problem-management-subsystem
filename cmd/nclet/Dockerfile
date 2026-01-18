@@ -51,7 +51,7 @@ COPY containerlab/ .
 RUN --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -o bin/containerlab -ldflags "-s -w -X 'github.com/srl-labs/containerlab/cmd.Version=0.72.0' -X 'github.com/srl-labs/containerlab/cmd.date=$(date)'" main.go
 
-FROM nicolaka/netshoot:v0.11
+FROM nicolaka/netshoot:v0.15
 WORKDIR /
 
 RUN apk add docker-cli
