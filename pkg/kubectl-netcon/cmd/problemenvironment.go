@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -33,6 +34,7 @@ func newProblemEnvironmentCmd() *cobra.Command {
 	cmd.AddCommand(newProblemEnvironmentAssignCmd())
 	cmd.AddCommand(newProblemEnvironmentUnassignCmd())
 	cmd.AddCommand(newProblemEnvironmentShowDeployLogCmd())
+	cmd.AddCommand(newProblemEnvironmentSSHCmd())
 
 	return cmd
 }
@@ -343,6 +345,82 @@ func newProblemEnvironmentShowDeployLogCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Show more verbose log")
+
+	return cmd
+}
+
+func newProblemEnvironmentSSHCmd() *cobra.Command {
+	var admin bool
+
+	cmd := &cobra.Command{
+		Use:          "ssh",
+		Short:        "Connect to a ProblemEnvironment via SSH (use --admin for admin access)",
+		SilenceUsage: true,
+		Args:         cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			name := args[0]
+
+			v1alpha1.AddToScheme(scheme.Scheme)
+
+			config, err := globalConfig.configFlags.ToRESTConfig()
+			if err != nil {
+				return err
+			}
+
+			clientset, err := clientset.NewForConfig(config)
+			if err != nil {
+				return err
+			}
+
+			client := clientset.ProblemEnvironment(*globalConfig.configFlags.Namespace)
+
+			problemEnvironment, err := client.Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			if problemEnvironment.Spec.WorkerName == "" {
+				return errors.New("ProblemEnvironment is not scheduled yet")
+			}
+
+			workerClient := clientset.Worker()
+			worker, err := workerClient.Get(ctx, problemEnvironment.Spec.WorkerName, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			externalIP := worker.Status.WorkerInfo.ExternalIPAddress
+			externalPort := worker.Status.WorkerInfo.ExternalPort
+
+			if externalIP == "" || externalPort == 0 {
+				return errors.New("Worker is not ready yet")
+			}
+
+			user := fmt.Sprintf("nc_%s", problemEnvironment.Name)
+			if admin {
+				user = fmt.Sprintf("ncadmin_%s", problemEnvironment.Name)
+			} else {
+				fmt.Printf("Password: %s\n", problemEnvironment.Status.Password)
+			}
+
+			sshCmd := exec.CommandContext(ctx, "ssh",
+				"-p", fmt.Sprintf("%d", externalPort),
+				fmt.Sprintf("%s@%s", user, externalIP),
+			)
+			sshCmd.Stdin = os.Stdin
+			sshCmd.Stdout = os.Stdout
+			sshCmd.Stderr = os.Stderr
+
+			if err := sshCmd.Run(); err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&admin, "admin", false, "Login as admin")
 
 	return cmd
 }
