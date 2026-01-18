@@ -354,7 +354,7 @@ func newProblemEnvironmentSSHCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:          "ssh",
-		Short:        "SSH into ProblemEnvironment",
+		Short:        "Connect to a ProblemEnvironment via SSH (use --admin for admin access)",
 		SilenceUsage: true,
 		Args:         cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
