@@ -71,53 +71,71 @@ function ProblemDetailPage() {
                         </Card>
                     </div>
 
-                    <Card title="Topology (Worker Distribution)">
-                        <div className="flex flex-wrap gap-4">
-                            {workers.items.map(worker => {
-                                const envsOnWorker = relatedEnvs.filter(e => e.spec.workerName === worker.metadata.name);
-                                if (envsOnWorker.length === 0) return null;
+                    <Card title="Worker Distribution">
+                        <div className="overflow-x-auto mt-2">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead className="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Worker</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Environment Count</th>
+                                        <th scope="col" className="relative px-6 py-3"><span className="sr-only">View</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {workers.items.map(worker => {
+                                        const count = relatedEnvs.filter(e => e.spec.workerName === worker.metadata.name).length;
+                                        if (count === 0) return null;
 
-                                return (
-                                    <div key={worker.metadata.name} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900 min-w-[200px]">
-                                        <h4 className="font-semibold text-gray-900 dark:text-white flex items-center mb-3">
-                                            <Network className="w-4 h-4 mr-2 text-gray-500" />
-                                            {worker.metadata.name}
-                                        </h4>
-                                        <ul className="space-y-2">
-                                            {envsOnWorker.map(env => (
-                                                <li key={env.metadata.name}>
-                                                    <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="block text-sm p-2 rounded hover:bg-white dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="font-medium text-indigo-600 dark:text-indigo-400 truncate max-w-[120px]" title={env.metadata.name}>{env.metadata.name}</span>
-                                                            <span className={`w-2 h-2 rounded-full ${env.status?.conditions?.some(c => c.type === 'Ready' && c.status === 'True') ? 'bg-green-500' : 'bg-gray-300'
-                                                                }`} />
-                                                        </div>
-                                                    </Link>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )
-                            })}
-                            {relatedEnvs.some(e => !e.spec.workerName) && (
-                                <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50/50 dark:bg-gray-900/50 min-w-[200px]">
-                                    <h4 className="font-semibold text-gray-500 dark:text-gray-400 flex items-center mb-3 italic">
-                                        Unscheduled
-                                    </h4>
-                                    <ul className="space-y-2">
-                                        {relatedEnvs.filter(e => !e.spec.workerName).map(env => (
-                                            <li key={env.metadata.name}>
-                                                <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="block text-sm p-2 rounded hover:bg-white dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-medium text-gray-600 dark:text-gray-400 truncate max-w-[120px]" title={env.metadata.name}>{env.metadata.name}</span>
-                                                        <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                                        return (
+                                            <tr key={worker.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                                    <div className="flex items-center">
+                                                        <Network className="w-4 h-4 mr-2 text-gray-400" />
+                                                        {worker.metadata.name}
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                    {count}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <Link
+                                                        to="/problem-environments"
+                                                        search={{
+                                                            problem: [problem.metadata.name],
+                                                            worker: [worker.metadata.name]
+                                                        }}
+                                                        className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                                    >
+                                                        View List
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {relatedEnvs.some(e => !e.spec.workerName) && (
+                                        <tr className="bg-gray-50/30 dark:bg-gray-900/30">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400 italic">
+                                                Unscheduled
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                {relatedEnvs.filter(e => !e.spec.workerName).length}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <Link
+                                                    to="/problem-environments"
+                                                    search={{
+                                                        problem: [problem.metadata.name],
+                                                        worker: [""]
+                                                    }}
+                                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                                >
+                                                    View List
                                                 </Link>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </Card>
                 </div>
@@ -153,8 +171,8 @@ function ProblemDetailPage() {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 space-x-1">
                                             {env.status?.conditions?.map(cond => (
                                                 <span key={cond.type} className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cond.status === 'True'
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
+                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                                                     }`}>
                                                     {cond.type}
                                                 </span>
