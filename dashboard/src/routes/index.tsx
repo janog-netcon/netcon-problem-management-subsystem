@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { getProblems, getProblemEnvironments, getWorkers } from '../data/k8s';
-import { Box, Server, Layers, ArrowRight } from 'lucide-react';
+import { Box, Server, Layers } from 'lucide-react';
 
 export const Route = createFileRoute('/')({
   component: DashboardHome,
@@ -62,49 +62,7 @@ function DashboardHome() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Problems</h2>
-              <Link to="/problems" search={{ p: 1, q: '' }} className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 flex items-center">
-                View all <ArrowRight className="w-4 h-4 ml-1" />
-              </Link>
-            </div>
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-              {problems.items.slice(0, 5).map(p => (
-                <li key={p.metadata.name} className="py-3">
-                  <Link to="/problems/$problemName" params={{ problemName: p.metadata.name }} className="flex justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 -mx-2 px-2 rounded transition-colors">
-                    <span className="text-gray-900 dark:text-white font-medium">{p.metadata.name}</span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">{new Date(p.metadata.creationTimestamp).toLocaleDateString()}</span>
-                  </Link>
-                </li>
-              ))}
-              {problems.items.length === 0 && <li className="py-3 text-gray-500 text-sm">No problems found.</li>}
-            </ul>
-          </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Environments</h2>
-              <Link to="/problem-environments" search={{ p: 1, q: '' }} className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 flex items-center">
-                View all <ArrowRight className="w-4 h-4 ml-1" />
-              </Link>
-            </div>
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-              {envs.items.slice(0, 5).map(e => (
-                <li key={e.metadata.name} className="py-3">
-                  <Link to="/problem-environments/$envName" params={{ envName: e.metadata.name }} className="flex justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 -mx-2 px-2 rounded transition-colors">
-                    <span className="text-gray-900 dark:text-white font-medium">{e.metadata.name}</span>
-                    <span className="text-sm text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                      {e.spec.workerName || 'Pending'}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-              {envs.items.length === 0 && <li className="py-3 text-gray-500 text-sm">No environments found.</li>}
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
   );
