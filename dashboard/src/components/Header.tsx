@@ -2,21 +2,15 @@ import { Link } from '@tanstack/react-router'
 
 import { useState } from 'react'
 import {
-  ChevronDown,
-  ChevronRight,
   Home,
   Menu,
   Network,
   SquareFunction,
-  StickyNote,
   X,
 } from 'lucide-react'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
-  const [groupedExpanded, setGroupedExpanded] = useState<
-    Record<string, boolean>
-  >({})
 
   return (
     <>
@@ -30,11 +24,11 @@ export default function Header() {
         </button>
         <h1 className="ml-4 text-xl font-semibold">
           <Link to="/">
-            <img
-              src="/tanstack-word-logo-white.svg"
-              alt="TanStack Logo"
-              className="h-10"
-            />
+            <Link to="/">
+              <span className="text-xl font-bold bg-gradient-to-r from-teal-400 to-blue-500 bg-clip-text text-transparent">
+                NETCON Telescope
+              </span>
+            </Link>
           </Link>
         </h1>
       </header>
@@ -70,6 +64,7 @@ export default function Header() {
 
           <Link
             to="/problems"
+            search={{ p: 1, q: '' }}
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
             activeProps={{
@@ -83,6 +78,7 @@ export default function Header() {
 
           <Link
             to="/problem-environments"
+            search={{ p: 1, q: '' }}
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
             activeProps={{

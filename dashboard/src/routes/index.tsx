@@ -33,8 +33,8 @@ function DashboardHome() {
     <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
         <header>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard Overview</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">Welcome to the Netcon Problem Management Dashboard.</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">NETCON Telescope</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Welcome to the Problem Management Dashboard.</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -66,7 +66,7 @@ function DashboardHome() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Problems</h2>
-              <Link to="/problems" className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 flex items-center">
+              <Link to="/problems" search={{ p: 1, q: '' }} className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 flex items-center">
                 View all <ArrowRight className="w-4 h-4 ml-1" />
               </Link>
             </div>
@@ -86,7 +86,7 @@ function DashboardHome() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Environments</h2>
-              <Link to="/problem-environments" className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 flex items-center">
+              <Link to="/problem-environments" search={{ p: 1, q: '' }} className="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 flex items-center">
                 View all <ArrowRight className="w-4 h-4 ml-1" />
               </Link>
             </div>
@@ -127,7 +127,8 @@ function SummaryCard({ title, count, icon, color, subtext, link }: any) {
   );
 
   if (link) {
-    return <Link to={link} className="block h-full">{Content}</Link>;
+    // @ts-expect-error: Link path is dynamic, making strict typing difficult for search params
+    return <Link to={link} search={{ p: 1, q: '' }} className="block h-full">{Content}</Link>;
   }
   return <div className="h-full">{Content}</div>;
 }
