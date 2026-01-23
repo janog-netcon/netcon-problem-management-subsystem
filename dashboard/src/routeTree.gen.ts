@@ -10,6 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProblemsIndexRouteImport } from './routes/problems/index'
+import { Route as ProblemEnvironmentsIndexRouteImport } from './routes/problem-environments/index'
+import { Route as ProblemsProblemNameRouteImport } from './routes/problems/$problemName'
+import { Route as ProblemEnvironmentsEnvNameRouteImport } from './routes/problem-environments/$envName'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api-request'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
@@ -23,6 +27,28 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProblemsIndexRoute = ProblemsIndexRouteImport.update({
+  id: '/problems/',
+  path: '/problems/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProblemEnvironmentsIndexRoute =
+  ProblemEnvironmentsIndexRouteImport.update({
+    id: '/problem-environments/',
+    path: '/problem-environments/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ProblemsProblemNameRoute = ProblemsProblemNameRouteImport.update({
+  id: '/problems/$problemName',
+  path: '/problems/$problemName',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProblemEnvironmentsEnvNameRoute =
+  ProblemEnvironmentsEnvNameRouteImport.update({
+    id: '/problem-environments/$envName',
+    path: '/problem-environments/$envName',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DemoStartServerFuncsRoute = DemoStartServerFuncsRouteImport.update({
   id: '/demo/start/server-funcs',
   path: '/demo/start/server-funcs',
@@ -61,6 +87,10 @@ const DemoStartSsrDataOnlyRoute = DemoStartSsrDataOnlyRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/problem-environments/$envName': typeof ProblemEnvironmentsEnvNameRoute
+  '/problems/$problemName': typeof ProblemsProblemNameRoute
+  '/problem-environments/': typeof ProblemEnvironmentsIndexRoute
+  '/problems/': typeof ProblemsIndexRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -71,6 +101,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/problem-environments/$envName': typeof ProblemEnvironmentsEnvNameRoute
+  '/problems/$problemName': typeof ProblemsProblemNameRoute
+  '/problem-environments': typeof ProblemEnvironmentsIndexRoute
+  '/problems': typeof ProblemsIndexRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -82,6 +116,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/problem-environments/$envName': typeof ProblemEnvironmentsEnvNameRoute
+  '/problems/$problemName': typeof ProblemsProblemNameRoute
+  '/problem-environments/': typeof ProblemEnvironmentsIndexRoute
+  '/problems/': typeof ProblemsIndexRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -94,6 +132,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/problem-environments/$envName'
+    | '/problems/$problemName'
+    | '/problem-environments/'
+    | '/problems/'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -104,6 +146,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/problem-environments/$envName'
+    | '/problems/$problemName'
+    | '/problem-environments'
+    | '/problems'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -114,6 +160,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/problem-environments/$envName'
+    | '/problems/$problemName'
+    | '/problem-environments/'
+    | '/problems/'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -125,6 +175,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProblemEnvironmentsEnvNameRoute: typeof ProblemEnvironmentsEnvNameRoute
+  ProblemsProblemNameRoute: typeof ProblemsProblemNameRoute
+  ProblemEnvironmentsIndexRoute: typeof ProblemEnvironmentsIndexRoute
+  ProblemsIndexRoute: typeof ProblemsIndexRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
@@ -141,6 +195,34 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/problems/': {
+      id: '/problems/'
+      path: '/problems'
+      fullPath: '/problems/'
+      preLoaderRoute: typeof ProblemsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/problem-environments/': {
+      id: '/problem-environments/'
+      path: '/problem-environments'
+      fullPath: '/problem-environments/'
+      preLoaderRoute: typeof ProblemEnvironmentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/problems/$problemName': {
+      id: '/problems/$problemName'
+      path: '/problems/$problemName'
+      fullPath: '/problems/$problemName'
+      preLoaderRoute: typeof ProblemsProblemNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/problem-environments/$envName': {
+      id: '/problem-environments/$envName'
+      path: '/problem-environments/$envName'
+      fullPath: '/problem-environments/$envName'
+      preLoaderRoute: typeof ProblemEnvironmentsEnvNameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo/start/server-funcs': {
@@ -197,6 +279,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProblemEnvironmentsEnvNameRoute: ProblemEnvironmentsEnvNameRoute,
+  ProblemsProblemNameRoute: ProblemsProblemNameRoute,
+  ProblemEnvironmentsIndexRoute: ProblemEnvironmentsIndexRoute,
+  ProblemsIndexRoute: ProblemsIndexRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,
