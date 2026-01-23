@@ -122,6 +122,7 @@ export interface WorkerList {
 
 const GROUP = 'netcon.janog.gr.jp';
 const VERSION = 'v1alpha1';
+const NAMESPACE = 'netcon';
 
 // Helper to lazily load the K8s client (Server Side Only)
 // This ensures that @kubernetes/client-node is not included in the client bundle.
@@ -138,10 +139,11 @@ export const getProblems = createServerFn({ method: "GET" })
     .handler(async () => {
         try {
             const customApi = await getApiClient();
-            const res = await customApi.listClusterCustomObject({
+            const res = await customApi.listNamespacedCustomObject({
                 group: GROUP,
                 version: VERSION,
                 plural: 'problems',
+                namespace: NAMESPACE,
             });
             return res as ProblemList;
         } catch (err) {
@@ -155,10 +157,11 @@ export const getProblem = createServerFn({ method: "GET" })
     .handler(async ({ data: name }) => {
         try {
             const customApi = await getApiClient();
-            const res = await customApi.getClusterCustomObject({
+            const res = await customApi.getNamespacedCustomObject({
                 group: GROUP,
                 version: VERSION,
                 plural: 'problems',
+                namespace: NAMESPACE,
                 name: name,
             });
             return res as Problem;
@@ -172,10 +175,11 @@ export const getProblemEnvironments = createServerFn({ method: "GET" })
     .handler(async () => {
         try {
             const customApi = await getApiClient();
-            const res = await customApi.listClusterCustomObject({
+            const res = await customApi.listNamespacedCustomObject({
                 group: GROUP,
                 version: VERSION,
                 plural: 'problemenvironments',
+                namespace: NAMESPACE,
             });
             return res as ProblemEnvironmentList;
         } catch (err) {
@@ -189,10 +193,11 @@ export const getProblemEnvironment = createServerFn({ method: "GET" })
     .handler(async ({ data: name }) => {
         try {
             const customApi = await getApiClient();
-            const res = await customApi.getClusterCustomObject({
+            const res = await customApi.getNamespacedCustomObject({
                 group: GROUP,
                 version: VERSION,
                 plural: 'problemenvironments',
+                namespace: NAMESPACE,
                 name: name,
             });
             return res as ProblemEnvironment;

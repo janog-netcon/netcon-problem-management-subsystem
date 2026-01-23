@@ -1,20 +1,23 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { getProblem, getProblemEnvironments } from '../../data/k8s';
-import { ChevronLeft, Layers, Server, Box } from 'lucide-react';
+import { getProblem, getProblemEnvironments, getWorkers } from '../../data/k8s';
+import { ChevronLeft, Box, Activity, Network, FileCode } from 'lucide-react';
+import { Tabs } from '../../components/Tabs';
+import { Card } from '../../components/Card';
 
 export const Route = createFileRoute('/problems/$problemName')({
     component: ProblemDetailPage,
     loader: async ({ params }) => {
-        const [problem, envsList] = await Promise.all([
+        const [problem, envsList, workers] = await Promise.all([
             getProblem({ data: params.problemName }),
             getProblemEnvironments(),
+            getWorkers(),
         ]);
-        return { problem, envsList };
+        return { problem, envsList, workers };
     },
 });
 
 function ProblemDetailPage() {
-    const { problem, envsList } = Route.useLoaderData();
+    const { problem, envsList, workers } = Route.useLoaderData();
 
     const relatedEnvs = envsList.items.filter((env) => {
         return env.metadata.ownerReferences?.some(
@@ -22,78 +25,110 @@ function ProblemDetailPage() {
         );
     });
 
-    return (
-        <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
-            <div className="max-w-7xl mx-auto space-y-6">
-                {/* Header */}
-                <div>
-                    <Link to="/problems" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4 transition-colors">
-                        <ChevronLeft className="w-4 h-4 mr-1" />
-                        Back to Problems
-                    </Link>
-                    <div className="flex items-center space-x-3">
-                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
-                            <Box className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{problem.metadata.name}</h1>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Created on {new Date(problem.metadata.creationTimestamp).toLocaleDateString()}</p>
-                        </div>
-                    </div>
-                </div>
+    // Calculate stats
+    const totalReplicas = problem.status?.replicas?.total ?? 0;
+    const scheduledReplicas = problem.status?.replicas?.scheduled ?? 0;
+    const readyReplicas = problem.status?.replicas?.assignable ?? 0;
 
-                {/* Status Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <StatusCard label="Total Replicas" value={problem.status?.replicas?.total ?? 0} color="gray" />
-                    <StatusCard label="Scheduled" value={problem.status?.replicas?.scheduled ?? 0} color="blue" />
-                    <StatusCard label="Assignable (Ready)" value={problem.status?.replicas?.assignable ?? 0} color="green" />
-                    <StatusCard label="Assigned" value={problem.status?.replicas?.assigned ?? 0} color="purple" />
-                </div>
-
-                {/* Details Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                            <Layers className="w-5 h-5 mr-2" />
-                            Specification
-                        </h2>
-                        <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                            <div className="sm:col-span-1">
-                                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Assignable Replicas</dt>
-                                <dd className="mt-1 text-sm text-gray-900 dark:text-white">{problem.spec.assignableReplicas}</dd>
-                            </div>
-                        </dl>
+    const tabs = [
+        {
+            id: 'overview',
+            label: 'Overview',
+            icon: <Activity className="w-4 h-4" />,
+            content: (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <StatusCard label="Total Replicas" value={totalReplicas} color="gray" />
+                        <StatusCard label="Scheduled" value={scheduledReplicas} color="blue" />
+                        <StatusCard label="Assignable (Ready)" value={readyReplicas} color="green" />
+                        <StatusCard label="Assigned" value={problem.status?.replicas?.assigned ?? 0} color="purple" />
                     </div>
-                    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                            <Server className="w-5 h-5 mr-2" />
-                            Internal Status
-                        </h2>
-                        {/* Raw JSON viewer equivalent or key details */}
-                        <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">Generation</span>
-                                <span className="text-sm font-mono text-gray-900 dark:text-white">{problem.metadata.generation ?? '-'}</span>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card title="Specification">
+                            <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Assignable Replicas</dt>
+                                    <dd className="mt-1 text-sm text-gray-900 dark:text-white">{problem.spec.assignableReplicas}</dd>
+                                </div>
+                                <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">UID</dt>
+                                    <dd className="mt-1 text-xs font-mono text-gray-900 dark:text-white">{problem.metadata.uid}</dd>
+                                </div>
+                            </dl>
+                        </Card>
+                        <Card title="Internal Status">
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Generation</span>
+                                    <span className="text-sm font-mono text-gray-900 dark:text-white">{problem.metadata.generation ?? '-'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">Resource Version</span>
+                                    <span className="text-sm font-mono text-gray-900 dark:text-white">{problem.metadata.resourceVersion}</span>
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">Resource Version</span>
-                                <span className="text-sm font-mono text-gray-900 dark:text-white">{problem.metadata.resourceVersion}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-500 dark:text-gray-400">UID</span>
-                                <span className="text-xs font-mono text-gray-900 dark:text-white">{problem.metadata.uid}</span>
-                            </div>
+                        </Card>
+                    </div>
+
+                    <Card title="Topology (Worker Distribution)">
+                        <div className="flex flex-wrap gap-4">
+                            {workers.items.map(worker => {
+                                const envsOnWorker = relatedEnvs.filter(e => e.spec.workerName === worker.metadata.name);
+                                if (envsOnWorker.length === 0) return null;
+
+                                return (
+                                    <div key={worker.metadata.name} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900 min-w-[200px]">
+                                        <h4 className="font-semibold text-gray-900 dark:text-white flex items-center mb-3">
+                                            <Network className="w-4 h-4 mr-2 text-gray-500" />
+                                            {worker.metadata.name}
+                                        </h4>
+                                        <ul className="space-y-2">
+                                            {envsOnWorker.map(env => (
+                                                <li key={env.metadata.name}>
+                                                    <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="block text-sm p-2 rounded hover:bg-white dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="font-medium text-indigo-600 dark:text-indigo-400 truncate max-w-[120px]" title={env.metadata.name}>{env.metadata.name}</span>
+                                                            <span className={`w-2 h-2 rounded-full ${env.status?.conditions?.some(c => c.type === 'Ready' && c.status === 'True') ? 'bg-green-500' : 'bg-gray-300'
+                                                                }`} />
+                                                        </div>
+                                                    </Link>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )
+                            })}
+                            {relatedEnvs.some(e => !e.spec.workerName) && (
+                                <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50/50 dark:bg-gray-900/50 min-w-[200px]">
+                                    <h4 className="font-semibold text-gray-500 dark:text-gray-400 flex items-center mb-3 italic">
+                                        Unscheduled
+                                    </h4>
+                                    <ul className="space-y-2">
+                                        {relatedEnvs.filter(e => !e.spec.workerName).map(env => (
+                                            <li key={env.metadata.name}>
+                                                <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="block text-sm p-2 rounded hover:bg-white dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-medium text-gray-600 dark:text-gray-400 truncate max-w-[120px]" title={env.metadata.name}>{env.metadata.name}</span>
+                                                        <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                                                    </div>
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    </Card>
                 </div>
-
-                {/* Problem Environments List */}
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-                    <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                            Problem Environments
-                        </h3>
-                    </div>
+            ),
+        },
+        {
+            id: 'environments',
+            label: 'Environments',
+            icon: <Box className="w-4 h-4" />,
+            content: (
+                <Card>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -132,10 +167,54 @@ function ProblemDetailPage() {
                                         </td>
                                     </tr>
                                 ))}
+                                {relatedEnvs.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                                            No environments found.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
+                </Card>
+            ),
+        },
+        {
+            id: 'yaml',
+            label: 'YAML',
+            icon: <FileCode className="w-4 h-4" />,
+            content: (
+                <Card title="Raw Resource">
+                    <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-xs font-mono">
+                        {JSON.stringify(problem, null, 2)}
+                    </pre>
+                </Card>
+            )
+        }
+    ];
+
+    return (
+        <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+            <div className="max-w-7xl mx-auto space-y-6">
+                {/* Header */}
+                <div>
+                    <Link to="/problems" search={{ p: 1, q: '' }} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4 transition-colors">
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Back to Problems
+                    </Link>
+                    <div className="flex items-center space-x-3">
+                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
+                            <Box className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{problem.metadata.name}</h1>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Created on {new Date(problem.metadata.creationTimestamp).toLocaleDateString()}</p>
+                        </div>
+                    </div>
                 </div>
+
+                <Tabs tabs={tabs} />
             </div>
         </div>
     );
