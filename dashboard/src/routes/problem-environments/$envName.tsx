@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { getProblemEnvironment, getDeploymentLog } from '../../data/k8s';
-import { ChevronLeft, Server, Activity, Terminal, Key, PlayCircle, CheckCircle, Clock, FileText } from 'lucide-react';
+import { ChevronLeft, Server, Activity, Terminal, Key, PlayCircle, CheckCircle, Clock, FileText, FileCode } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { CopyButton } from '../../components/CopyButton';
 import { AnsiText } from '../../components/AnsiText';
+import { Tabs } from '../../components/Tabs';
 
 export const Route = createFileRoute('/problem-environments/$envName')({
     component: ProblemEnvironmentDetailPage,
@@ -24,28 +25,12 @@ function ProblemEnvironmentDetailPage() {
     const managementIP = env.status?.containers?.find(c => c.managementIPAddress)?.managementIPAddress;
     const sshCommand = managementIP ? `ssh user@${managementIP}` : 'IP not available';
 
-    return (
-        <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
-            <div className="max-w-7xl mx-auto space-y-6">
-                {/* Header */}
-                <div>
-                    <Link to="/problem-environments" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4 transition-colors">
-                        <ChevronLeft className="w-4 h-4 mr-1" />
-                        Back to Environments
-                    </Link>
-                    <div className="flex items-center space-x-3">
-                        <div className="p-3 bg-teal-100 dark:bg-teal-900/50 rounded-lg">
-                            <Server className="w-8 h-8 text-teal-600 dark:text-teal-400" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{env.metadata.name}</h1>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Deployed on <span className="font-medium text-gray-900 dark:text-gray-300">{env.spec.workerName || 'Pending'}</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
+    const tabs = [
+        {
+            id: 'overview',
+            label: 'Overview',
+            icon: <Activity className="w-4 h-4" />,
+            content: (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column: Connection & Status */}
                     <div className="lg:col-span-1 space-y-6">
@@ -72,7 +57,9 @@ function ProblemEnvironmentDetailPage() {
                                 </div>
                             </div>
                         </Card>
+                    </div>
 
+                    <div className="lg:col-span-2">
                         <Card title={<><Activity className="w-5 h-5 mr-2" /> Timeline</>}>
                             <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-6 pb-2">
                                 {['Scheduled', 'Deployed', 'Ready'].map((type, idx) => {
@@ -108,51 +95,93 @@ function ProblemEnvironmentDetailPage() {
                             </div>
                         </Card>
                     </div>
+                </div>
+            )
+        },
+        {
+            id: 'containers',
+            label: 'Containers',
+            icon: <Terminal className="w-4 h-4" />,
+            content: (
+                <Card title={<><Terminal className="w-5 h-5 mr-2" /> Containers</>}>
+                    <div className="overflow-hidden">
+                        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                            {env.status?.containers?.map((container, idx) => (
+                                <li key={idx} className="py-4 first:pt-0 last:pb-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center">
+                                            <div className={`w-2.5 h-2.5 rounded-full mr-3 ${container.ready ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                            <h3 className="text-sm font-medium text-gray-900 dark:text-white">{container.name}</h3>
+                                        </div>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{container.containerID ? container.containerID.slice(0, 12) : '-'}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400 pl-5">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs uppercase tracking-wider text-gray-400">Image</span>
+                                            <span className="truncate" title={container.image}>{container.image}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs uppercase tracking-wider text-gray-400">Mgmt IP</span>
+                                            <span className="font-mono">{container.managementIPAddress || '-'}</span>
+                                        </div>
+                                    </div>
+                                </li>
+                            ))}
+                            {(!env.status?.containers || env.status.containers.length === 0) && (
+                                <li className="text-sm text-gray-500 dark:text-gray-400 italic">No containers reported yet.</li>
+                            )}
+                        </ul>
+                    </div>
+                </Card>
+            )
+        },
+        {
+            id: 'logs',
+            label: 'Deployment Logs',
+            icon: <FileText className="w-4 h-4" />,
+            content: (
+                <Card title={<><FileText className="w-5 h-5 mr-2" /> Deployment Logs</>}>
+                    <LogViewer logs={deployLog} />
+                </Card>
+            )
+        },
+        {
+            id: 'yaml',
+            label: 'YAML',
+            icon: <FileCode className="w-4 h-4" />,
+            content: (
+                <Card title="Raw Resource">
+                    <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-xs font-mono max-h-[600px]">
+                        {JSON.stringify(env, null, 2)}
+                    </pre>
+                </Card>
+            )
+        }
+    ];
 
-                    {/* Right Column: Containers & Details */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <Card title={<><Terminal className="w-5 h-5 mr-2" /> Containers</>}>
-                            <div className="overflow-hidden">
-                                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {env.status?.containers?.map((container, idx) => (
-                                        <li key={idx} className="py-4 first:pt-0 last:pb-0">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center">
-                                                    <div className={`w-2.5 h-2.5 rounded-full mr-3 ${container.ready ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                                    <h3 className="text-sm font-medium text-gray-900 dark:text-white">{container.name}</h3>
-                                                </div>
-                                                <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">{container.containerID ? container.containerID.slice(0, 12) : '-'}</span>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-500 dark:text-gray-400 pl-5">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs uppercase tracking-wider text-gray-400">Image</span>
-                                                    <span className="truncate" title={container.image}>{container.image}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs uppercase tracking-wider text-gray-400">Mgmt IP</span>
-                                                    <span className="font-mono">{container.managementIPAddress || '-'}</span>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    ))}
-                                    {(!env.status?.containers || env.status.containers.length === 0) && (
-                                        <li className="text-sm text-gray-500 dark:text-gray-400 italic">No containers reported yet.</li>
-                                    )}
-                                </ul>
-                            </div>
-                        </Card>
-
-                        <Card title={<><FileText className="w-5 h-5 mr-2" /> Deployment Logs</>}>
-                            <LogViewer logs={deployLog} />
-                        </Card>
-
-                        <Card title="Raw Status">
-                            <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-xs font-mono max-h-96">
-                                {JSON.stringify(env.status, null, 2)}
-                            </pre>
-                        </Card>
+    return (
+        <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+            <div className="max-w-7xl mx-auto space-y-6">
+                {/* Header */}
+                <div>
+                    <Link to="/problem-environments" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4 transition-colors">
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Back to Environments
+                    </Link>
+                    <div className="flex items-center space-x-3">
+                        <div className="p-3 bg-teal-100 dark:bg-teal-900/50 rounded-lg">
+                            <Server className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{env.metadata.name}</h1>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Deployed on <span className="font-medium text-gray-900 dark:text-gray-300">{env.spec.workerName || 'Pending'}</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
+
+                <Tabs tabs={tabs} />
             </div>
         </div>
     );
