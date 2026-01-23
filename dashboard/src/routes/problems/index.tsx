@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { getProblems, Problem } from '../../data/k8s';
+import { getProblems } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
 import { Pagination } from '../../components/Pagination';
 import { z } from 'zod';
@@ -78,9 +78,6 @@ function ProblemsPage() {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Replicas (Total/Sched/Rdy/Asgn)
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Age
-                                    </th>
                                     <th scope="col" className="relative px-6 py-3">
                                         <span className="sr-only">View</span>
                                     </th>
@@ -106,9 +103,6 @@ function ProblemsPage() {
                                                 <span>/</span>
                                                 <span title="Assigned" className="px-2 py-1 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">{problem.status?.replicas?.assigned ?? 0}</span>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                            {new Date(problem.metadata.creationTimestamp).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <Link to="/problems/$problemName" params={{ problemName: problem.metadata.name }} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
