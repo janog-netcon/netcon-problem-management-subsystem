@@ -65,7 +65,6 @@ export default function Header() {
 
           <Link
             to="/problems"
-            search={{ p: 1, q: '' }}
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
             activeProps={{
@@ -79,7 +78,6 @@ export default function Header() {
 
           <Link
             to="/problem-environments"
-            search={{ p: 1, q: '' }}
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
             activeProps={{
@@ -93,7 +91,6 @@ export default function Header() {
 
           <Link
             to="/workers"
-            search={{ p: 1, q: '' }}
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
             activeProps={{

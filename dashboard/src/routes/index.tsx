@@ -85,8 +85,7 @@ function SummaryCard({ title, count, icon, color, subtext, link }: any) {
   );
 
   if (link) {
-    // @ts-expect-error: Link path is dynamic, making strict typing difficult for search params
-    return <Link to={link} search={{ p: 1, q: '' }} className="block h-full">{Content}</Link>;
+    return <Link to={link} className="block h-full">{Content}</Link>;
   }
   return <div className="h-full">{Content}</div>;
 }

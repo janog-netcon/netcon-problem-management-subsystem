@@ -5,8 +5,8 @@ import { Pagination } from '../../components/Pagination';
 import { z } from 'zod';
 
 const problemSearchSchema = z.object({
-    p: z.number().default(1),
-    q: z.string().default(''),
+    p: z.number().optional(),
+    q: z.string().optional(),
 });
 
 export const Route = createFileRoute('/problems/')({
@@ -32,7 +32,7 @@ function ProblemsPage() {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
     // Ensure current page is valid
-    const currentPage = Math.min(Math.max(1, search.p), Math.max(1, totalPages));
+    const currentPage = Math.min(Math.max(1, search.p ?? 1), Math.max(1, totalPages));
 
     const paginatedProblems = filteredProblems.slice(
         (currentPage - 1) * itemsPerPage,
@@ -41,14 +41,14 @@ function ProblemsPage() {
 
     const handleSearch = (newQuery: string) => {
         navigate({
-            search: (prev) => ({ ...prev, q: newQuery, p: 1 }),
+            search: (prev) => ({ ...prev, q: newQuery || undefined, p: undefined }),
             replace: true,
         });
     };
 
     const handlePageChange = (newPage: number) => {
         navigate({
-            search: (prev) => ({ ...prev, p: newPage }),
+            search: (prev) => ({ ...prev, p: newPage === 1 ? undefined : newPage }),
         });
     };
 
@@ -63,7 +63,7 @@ function ProblemsPage() {
                         </p>
                     </div>
                     <div className="mt-4 md:mt-0 w-full md:w-64">
-                        <SearchBar value={search.q} onChange={handleSearch} placeholder="Search problems..." />
+                        <SearchBar value={search.q || ''} onChange={handleSearch} placeholder="Search problems..." />
                     </div>
                 </div>
 

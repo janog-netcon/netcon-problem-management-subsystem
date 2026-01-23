@@ -1,35 +1,100 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { getProblemEnvironments, ProblemEnvironment } from '../../data/k8s';
+import { getProblemEnvironments, getProblems, getWorkers, ProblemEnvironment } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
 import { Pagination } from '../../components/Pagination';
+import { MultiSelect } from '../../components/MultiSelect';
 import { z } from 'zod';
 
 const envSearchSchema = z.object({
-    p: z.number().default(1),
-    q: z.string().default(''),
+    p: z.number().optional(),
+    q: z.string().optional(),
+    worker: z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(z.string())).optional(),
+    problem: z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(z.string())).optional(),
+    status: z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(z.string())).optional(),
 });
 
 export const Route = createFileRoute('/problem-environments/')({
     component: ProblemEnvironmentsPage,
-    loader: async () => await getProblemEnvironments(),
+    loader: async () => {
+        const [envs, problems, workers] = await Promise.all([
+            getProblemEnvironments(),
+            getProblems(),
+            getWorkers(),
+        ]);
+        return { envs, problems, workers };
+    },
     validateSearch: (search) => envSearchSchema.parse(search),
 });
 
+// Helper to determine status color based on conditions
+const getStatusColor = (status: ProblemEnvironment['status']) => {
+    const isReady = status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
+    if (isReady) return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
+
+    const isDeployed = status?.conditions?.find(c => c.type === 'Deployed' && c.status === 'True');
+    if (isDeployed) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
+
+    const isScheduled = status?.conditions?.find(c => c.type === 'Scheduled' && c.status === 'True');
+    if (isScheduled) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
+
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+};
+
+const getStatusText = (status: ProblemEnvironment['status']) => {
+    const isReady = status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
+    if (isReady) return 'Ready';
+
+    const isDeployed = status?.conditions?.find(c => c.type === 'Deployed' && c.status === 'True');
+    if (isDeployed) return 'Deployed';
+
+    const isScheduled = status?.conditions?.find(c => c.type === 'Scheduled' && c.status === 'True');
+    if (isScheduled) return 'Scheduled';
+
+    return 'Unknown';
+};
+
 function ProblemEnvironmentsPage() {
-    const envsList = Route.useLoaderData();
+    const { envs, problems, workers } = Route.useLoaderData();
     const search = Route.useSearch();
     const navigate = useNavigate({ from: Route.fullPath });
 
     const itemsPerPage = 20;
 
-    const filteredEnvs = envsList.items.filter((env) => {
-        if (!search.q) return true;
-        return env.metadata.name.toLowerCase().includes(search.q.toLowerCase());
+    const filteredEnvs = envs.items.filter((env) => {
+        // Name search (q)
+        if (search.q && !env.metadata.name.toLowerCase().includes(search.q.toLowerCase())) {
+            return false;
+        }
+
+        // Worker filter
+        if (search.worker && search.worker.length > 0) {
+            if (!search.worker.includes(env.spec.workerName || '')) {
+                return false;
+            }
+        }
+
+        // Problem filter
+        if (search.problem && search.problem.length > 0) {
+            const parentProblem = env.metadata.ownerReferences?.find(ref => ref.kind === 'Problem')?.name;
+            if (!search.problem.includes(parentProblem || '')) {
+                return false;
+            }
+        }
+
+        // Status filter
+        if (search.status && search.status.length > 0) {
+            const statusText = getStatusText(env.status);
+            if (!search.status.includes(statusText)) {
+                return false;
+            }
+        }
+
+        return true;
     });
 
     const totalItems = filteredEnvs.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
-    const currentPage = Math.min(Math.max(1, search.p), Math.max(1, totalPages));
+    const currentPage = Math.min(Math.max(1, search.p ?? 1), Math.max(1, totalPages));
 
     const paginatedEnvs = filteredEnvs.slice(
         (currentPage - 1) * itemsPerPage,
@@ -38,54 +103,70 @@ function ProblemEnvironmentsPage() {
 
     const handleSearch = (newQuery: string) => {
         navigate({
-            search: (prev) => ({ ...prev, q: newQuery, p: 1 }),
+            search: (prev) => ({ ...prev, q: newQuery || undefined, p: undefined }),
+            replace: true,
+        });
+    };
+
+    const handleFilterChange = (key: 'worker' | 'problem' | 'status', value: string) => {
+        navigate({
+            search: (prev) => {
+                const current = prev[key] || [];
+                const updated = current.includes(value)
+                    ? current.filter(v => v !== value)
+                    : [...current, value];
+                return { ...prev, [key]: updated.length > 0 ? updated : undefined, p: undefined };
+            },
             replace: true,
         });
     };
 
     const handlePageChange = (newPage: number) => {
         navigate({
-            search: (prev) => ({ ...prev, p: newPage }),
+            search: (prev) => ({ ...prev, p: newPage === 1 ? undefined : newPage }),
         });
-    };
-
-    // Helper to determine status color based on conditions
-    const getStatusColor = (status: ProblemEnvironment['status']) => {
-        const isReady = status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
-        if (isReady) return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
-
-        const isDeployed = status?.conditions?.find(c => c.type === 'Deployed' && c.status === 'True');
-        if (isDeployed) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
-
-        const isScheduled = status?.conditions?.find(c => c.type === 'Scheduled' && c.status === 'True');
-        if (isScheduled) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
-
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-    };
-
-    const getStatusText = (status: ProblemEnvironment['status']) => {
-        const isReady = status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
-        if (isReady) return 'Ready';
-
-        const isDeployed = status?.conditions?.find(c => c.type === 'Deployed' && c.status === 'True');
-        if (isDeployed) return 'Deployed';
-
-        const isScheduled = status?.conditions?.find(c => c.type === 'Scheduled' && c.status === 'True');
-        if (isScheduled) return 'Scheduled';
-
-        return 'Unknown';
     };
 
     return (
         <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
             <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-                    <div>
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-8 gap-4">
+                    <div className="flex-grow">
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Problem Environments</h1>
                         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">View and manage problem environments running on workers.</p>
+
+                        {/* Filters */}
+                        <div className="mt-6 flex flex-wrap gap-4 items-end">
+                            <MultiSelect
+                                label="Worker"
+                                options={[
+                                    ...workers.items.map(w => ({ label: w.metadata.name, value: w.metadata.name })),
+                                    { label: 'Unscheduled', value: '' }
+                                ]}
+                                selectedValues={search.worker || []}
+                                onChange={(value) => handleFilterChange('worker', value)}
+                                placeholder="All Workers"
+                            />
+
+                            <MultiSelect
+                                label="Problem"
+                                options={problems.items.map(p => ({ label: p.metadata.name, value: p.metadata.name }))}
+                                selectedValues={search.problem || []}
+                                onChange={(value) => handleFilterChange('problem', value)}
+                                placeholder="All Problems"
+                            />
+
+                            <MultiSelect
+                                label="Status"
+                                options={['Ready', 'Deployed', 'Scheduled', 'Unknown'].map(s => ({ label: s, value: s }))}
+                                selectedValues={search.status || []}
+                                onChange={(value) => handleFilterChange('status', value)}
+                                placeholder="All Statuses"
+                            />
+                        </div>
                     </div>
-                    <div className="mt-4 md:mt-0 w-full md:w-64">
-                        <SearchBar value={search.q} onChange={handleSearch} placeholder="Search environments..." />
+                    <div className="mt-4 md:mt-0 w-full md:w-64 shrink-0">
+                        <SearchBar value={search.q || ''} onChange={handleSearch} placeholder="Search environments..." />
                     </div>
                 </div>
 
