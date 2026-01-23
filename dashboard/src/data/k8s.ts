@@ -222,3 +222,21 @@ export const getWorkers = createServerFn({ method: "GET" })
             throw err;
         }
     });
+
+export const getWorker = createServerFn({ method: "GET" })
+    .inputValidator((name: string) => name)
+    .handler(async ({ data: name }) => {
+        try {
+            const customApi = await getApiClient();
+            const res = await customApi.getClusterCustomObject({
+                group: GROUP,
+                version: VERSION,
+                plural: 'workers',
+                name: name,
+            });
+            return res as Worker;
+        } catch (err) {
+            console.error(`Failed to fetch worker ${name}:`, err);
+            throw err;
+        }
+    });

@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WorkersIndexRouteImport } from './routes/workers/index'
 import { Route as ProblemsIndexRouteImport } from './routes/problems/index'
 import { Route as ProblemEnvironmentsIndexRouteImport } from './routes/problem-environments/index'
+import { Route as WorkersWorkerNameRouteImport } from './routes/workers/$workerName'
 import { Route as ProblemsProblemNameRouteImport } from './routes/problems/$problemName'
 import { Route as ProblemEnvironmentsEnvNameRouteImport } from './routes/problem-environments/$envName'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
@@ -27,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkersIndexRoute = WorkersIndexRouteImport.update({
+  id: '/workers/',
+  path: '/workers/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProblemsIndexRoute = ProblemsIndexRouteImport.update({
   id: '/problems/',
   path: '/problems/',
@@ -38,6 +45,11 @@ const ProblemEnvironmentsIndexRoute =
     path: '/problem-environments/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const WorkersWorkerNameRoute = WorkersWorkerNameRouteImport.update({
+  id: '/workers/$workerName',
+  path: '/workers/$workerName',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProblemsProblemNameRoute = ProblemsProblemNameRouteImport.update({
   id: '/problems/$problemName',
   path: '/problems/$problemName',
@@ -89,8 +101,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/problem-environments/$envName': typeof ProblemEnvironmentsEnvNameRoute
   '/problems/$problemName': typeof ProblemsProblemNameRoute
+  '/workers/$workerName': typeof WorkersWorkerNameRoute
   '/problem-environments/': typeof ProblemEnvironmentsIndexRoute
   '/problems/': typeof ProblemsIndexRoute
+  '/workers/': typeof WorkersIndexRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -103,8 +117,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/problem-environments/$envName': typeof ProblemEnvironmentsEnvNameRoute
   '/problems/$problemName': typeof ProblemsProblemNameRoute
+  '/workers/$workerName': typeof WorkersWorkerNameRoute
   '/problem-environments': typeof ProblemEnvironmentsIndexRoute
   '/problems': typeof ProblemsIndexRoute
+  '/workers': typeof WorkersIndexRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -118,8 +134,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/problem-environments/$envName': typeof ProblemEnvironmentsEnvNameRoute
   '/problems/$problemName': typeof ProblemsProblemNameRoute
+  '/workers/$workerName': typeof WorkersWorkerNameRoute
   '/problem-environments/': typeof ProblemEnvironmentsIndexRoute
   '/problems/': typeof ProblemsIndexRoute
+  '/workers/': typeof WorkersIndexRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -134,8 +152,10 @@ export interface FileRouteTypes {
     | '/'
     | '/problem-environments/$envName'
     | '/problems/$problemName'
+    | '/workers/$workerName'
     | '/problem-environments/'
     | '/problems/'
+    | '/workers/'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -148,8 +168,10 @@ export interface FileRouteTypes {
     | '/'
     | '/problem-environments/$envName'
     | '/problems/$problemName'
+    | '/workers/$workerName'
     | '/problem-environments'
     | '/problems'
+    | '/workers'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -162,8 +184,10 @@ export interface FileRouteTypes {
     | '/'
     | '/problem-environments/$envName'
     | '/problems/$problemName'
+    | '/workers/$workerName'
     | '/problem-environments/'
     | '/problems/'
+    | '/workers/'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -177,8 +201,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ProblemEnvironmentsEnvNameRoute: typeof ProblemEnvironmentsEnvNameRoute
   ProblemsProblemNameRoute: typeof ProblemsProblemNameRoute
+  WorkersWorkerNameRoute: typeof WorkersWorkerNameRoute
   ProblemEnvironmentsIndexRoute: typeof ProblemEnvironmentsIndexRoute
   ProblemsIndexRoute: typeof ProblemsIndexRoute
+  WorkersIndexRoute: typeof WorkersIndexRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
@@ -197,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workers/': {
+      id: '/workers/'
+      path: '/workers'
+      fullPath: '/workers/'
+      preLoaderRoute: typeof WorkersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/problems/': {
       id: '/problems/'
       path: '/problems'
@@ -209,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/problem-environments'
       fullPath: '/problem-environments/'
       preLoaderRoute: typeof ProblemEnvironmentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workers/$workerName': {
+      id: '/workers/$workerName'
+      path: '/workers/$workerName'
+      fullPath: '/workers/$workerName'
+      preLoaderRoute: typeof WorkersWorkerNameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/problems/$problemName': {
@@ -281,8 +321,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ProblemEnvironmentsEnvNameRoute: ProblemEnvironmentsEnvNameRoute,
   ProblemsProblemNameRoute: ProblemsProblemNameRoute,
+  WorkersWorkerNameRoute: WorkersWorkerNameRoute,
   ProblemEnvironmentsIndexRoute: ProblemEnvironmentsIndexRoute,
   ProblemsIndexRoute: ProblemsIndexRoute,
+  WorkersIndexRoute: WorkersIndexRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,

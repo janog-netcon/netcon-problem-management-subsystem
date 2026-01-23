@@ -58,7 +58,7 @@ function DashboardHome() {
             count={workerCount}
             icon={<Server className="w-8 h-8 text-white" />}
             color="bg-purple-500"
-          // Workers page not implemented, maybe link to environments filtered? or just no link
+            link="/workers"
           />
         </div>
 
