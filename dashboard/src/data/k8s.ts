@@ -240,3 +240,42 @@ export const getWorker = createServerFn({ method: "GET" })
             throw err;
         }
     });
+
+export const getDeploymentLog = createServerFn({ method: "GET" })
+    .inputValidator((envName: string) => envName)
+    .handler(async ({ data: envName }) => {
+        try {
+            const { KubeConfig, CoreV1Api } = await import('@kubernetes/client-node');
+            const kc = new KubeConfig();
+            kc.loadFromDefault();
+            const k8sApi = kc.makeApiClient(CoreV1Api);
+
+            // List all ConfigMaps in the namespace
+            // NOTE: fieldSelector for name is not supported for partial matches, so we list and filter.
+            const res = await k8sApi.listNamespacedConfigMap({
+                namespace: NAMESPACE,
+            });
+
+            const prefix = `deploy-${envName}`;
+            // Find the ConfigMap that starts with the prefix and has stderr data
+            // We search for any matching ConfigMap, even if it doesn't have data, just to be safe,
+            // but the original logic filtered for stderr. Let's filter for either stdout or stderr.
+            const cm = res.items.find((item: any) =>
+                item.metadata?.name?.startsWith(prefix)
+            );
+
+            if (cm && cm.data) {
+                return {
+                    stdout: cm.data['stdout'] || null,
+                    stderr: cm.data['stderr'] || null
+                };
+            }
+            return { stdout: null, stderr: null };
+            // Return null instead of throwing so the page can still load
+            return null;
+        } catch (err) {
+            console.error(`Failed to fetch deployment log for ${envName}:`, err);
+            // Return null instead of throwing so the page can still load
+            return null;
+        }
+    });

@@ -1,18 +1,24 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { getProblemEnvironment } from '../../data/k8s';
-import { ChevronLeft, Server, Activity, Terminal, Key, PlayCircle, CheckCircle, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { getProblemEnvironment, getDeploymentLog } from '../../data/k8s';
+import { ChevronLeft, Server, Activity, Terminal, Key, PlayCircle, CheckCircle, Clock, FileText } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { CopyButton } from '../../components/CopyButton';
+import { AnsiText } from '../../components/AnsiText';
 
 export const Route = createFileRoute('/problem-environments/$envName')({
     component: ProblemEnvironmentDetailPage,
     loader: async ({ params }) => {
-        return await getProblemEnvironment({ data: params.envName });
+        const [env, deployLog] = await Promise.all([
+            getProblemEnvironment({ data: params.envName }),
+            getDeploymentLog({ data: params.envName })
+        ]);
+        return { env, deployLog };
     },
 });
 
 function ProblemEnvironmentDetailPage() {
-    const env = Route.useLoaderData();
+    const { env, deployLog } = Route.useLoaderData();
 
     // Helper to extract management IP
     const managementIP = env.status?.containers?.find(c => c.managementIPAddress)?.managementIPAddress;
@@ -136,6 +142,10 @@ function ProblemEnvironmentDetailPage() {
                             </div>
                         </Card>
 
+                        <Card title={<><FileText className="w-5 h-5 mr-2" /> Deployment Logs</>}>
+                            <LogViewer logs={deployLog} />
+                        </Card>
+
                         <Card title="Raw Status">
                             <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-xs font-mono max-h-96">
                                 {JSON.stringify(env.status, null, 2)}
@@ -143,6 +153,47 @@ function ProblemEnvironmentDetailPage() {
                         </Card>
                     </div>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function LogViewer({ logs }: { logs: { stdout: string | null, stderr: string | null } | null }) {
+    const [activeTab, setActiveTab] = useState<'stderr' | 'stdout'>('stdout');
+
+    if (!logs || (!logs.stdout && !logs.stderr)) {
+        return <div className="p-4 text-sm text-gray-500 italic dark:text-gray-400">No deployment logs found.</div>;
+    }
+
+    return (
+        <div className="bg-gray-900 rounded-lg overflow-hidden font-mono text-xs">
+            {/* Tabs */}
+            <div className="flex border-b border-gray-700">
+                <button
+                    onClick={() => setActiveTab('stdout')}
+                    className={`px-4 py-2 font-medium focus:outline-none transition-colors ${activeTab === 'stdout'
+                        ? 'bg-gray-800 text-white border-b-2 border-indigo-500'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                        }`}
+                >
+                    stdout
+                </button>
+                <button
+                    onClick={() => setActiveTab('stderr')}
+                    className={`px-4 py-2 font-medium focus:outline-none transition-colors ${activeTab === 'stderr'
+                        ? 'bg-gray-800 text-white border-b-2 border-indigo-500'
+                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                        }`}
+                >
+                    stderr
+                </button>
+            </div>
+
+            {/* Content */}
+            <div className="max-h-96 overflow-auto p-4">
+                <pre className="text-gray-300 whitespace-pre font-mono leading-relaxed" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}>
+                    <AnsiText text={activeTab === 'stderr' ? (logs.stderr || 'No stderr content.') : (logs.stdout || 'No stdout content.')} />
+                </pre>
             </div>
         </div>
     );
