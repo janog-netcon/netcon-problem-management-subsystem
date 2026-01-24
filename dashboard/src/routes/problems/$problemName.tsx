@@ -217,7 +217,7 @@ function ProblemDetailPage() {
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
                 <div>
-                    <Link to="/problems" search={{ p: 1, q: '' }} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4 transition-colors">
+                    <Link to="/problems" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 mb-4 transition-colors">
                         <ChevronLeft className="w-4 h-4 mr-1" />
                         Back to Problems
                     </Link>

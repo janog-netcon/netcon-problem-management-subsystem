@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router';
 import { getProblems } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
 import { z } from 'zod';
-import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowUpDown, RefreshCw } from 'lucide-react';
 
 const problemSearchSchema = z.object({
     q: z.string().optional(),
@@ -12,19 +12,25 @@ const problemSearchSchema = z.object({
 
 export const Route = createFileRoute('/problems/')({
     component: ProblemsPage,
-    loader: async () => await getProblems(),
+    loader: async () => {
+        const problems = await getProblems();
+        return { problems, updatedAt: new Date() };
+    },
     validateSearch: (search) => problemSearchSchema.parse(search),
+    staleTime: 60000, // 1 minute
+    gcTime: 300000,   // 5 minutes
+    shouldReload: false,
 });
 
 function ProblemsPage() {
-    const problemsList = Route.useLoaderData();
+    const { problems, updatedAt } = Route.useLoaderData();
     const search = Route.useSearch();
     const navigate = useNavigate({ from: Route.fullPath });
-
+    const router = useRouter();
 
 
     // Client-side filtering
-    const filteredProblems = problemsList.items.filter((problem) => {
+    const filteredProblems = problems.items.filter((problem) => {
         if (!search.q) return true;
         return problem.metadata.name.toLowerCase().includes(search.q.toLowerCase());
     });
@@ -86,8 +92,22 @@ function ProblemsPage() {
                             Manage and view the status of deployed problems.
                         </p>
                     </div>
-                    <div className="mt-4 md:mt-0 w-full md:w-64">
-                        <SearchBar value={search.q || ''} onChange={handleSearch} placeholder="Search problems..." />
+                    <div className="mt-4 md:mt-0 flex flex-col items-end space-y-2">
+                        <div className="flex items-center space-x-3 w-full md:w-auto">
+                            <div className="w-full md:w-64">
+                                <SearchBar value={search.q || ''} onChange={handleSearch} placeholder="Search problems..." />
+                            </div>
+                            <button
+                                onClick={() => router.invalidate()}
+                                className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                title="Refresh data"
+                            >
+                                <RefreshCw className={`w-5 h-5 text-gray-500 dark:text-gray-400 ${router.state.isLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
+                            Last updated: {new Date(updatedAt).toLocaleTimeString()}
+                        </p>
                     </div>
                 </div>
 
