@@ -2,9 +2,12 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { getProblems } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
 import { z } from 'zod';
+import { ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
 const problemSearchSchema = z.object({
     q: z.string().optional(),
+    sort: z.enum(['desired', 'current', 'deploying', 'total']).optional(),
+    dir: z.enum(['asc', 'desc']).optional(),
 });
 
 export const Route = createFileRoute('/problems/')({
@@ -26,12 +29,48 @@ function ProblemsPage() {
         return problem.metadata.name.toLowerCase().includes(search.q.toLowerCase());
     });
 
+    // Client-side sorting
+    const sortedProblems = [...filteredProblems].sort((a, b) => {
+        if (!search.sort) return 0;
+
+        const dir = search.dir === 'desc' ? -1 : 1;
+
+        const getVal = (p: typeof a) => {
+            switch (search.sort) {
+                case 'desired': return p.spec.assignableReplicas;
+                case 'current': return (p.status?.replicas?.assignable ?? 0) + (p.status?.replicas?.assigned ?? 0);
+                case 'deploying': return p.status?.replicas?.scheduled ?? 0;
+                case 'total': return p.status?.replicas?.total ?? 0;
+                default: return 0;
+            }
+        };
+
+        const valA = getVal(a);
+        const valB = getVal(b);
+
+        if (valA < valB) return -1 * dir;
+        if (valA > valB) return 1 * dir;
+        return 0;
+    });
+
 
 
     const handleSearch = (newQuery: string) => {
         navigate({
             search: (prev) => ({ ...prev, q: newQuery || undefined }),
             replace: true,
+        });
+    };
+
+    const handleSort = (column: 'desired' | 'current' | 'deploying' | 'total') => {
+        navigate({
+            search: (prev) => {
+                if (prev.sort === column) {
+                    if (prev.dir === 'asc') return { ...prev, dir: 'desc' };
+                    return { ...prev, sort: undefined, dir: undefined };
+                }
+                return { ...prev, sort: column, dir: 'asc' };
+            }
         });
     };
 
@@ -57,20 +96,51 @@ function ProblemsPage() {
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                    <th
+                                        scope="col"
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                                    >
                                         Name
                                     </th>
-                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
-                                        Desired
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                                        onClick={() => handleSort('desired')}
+                                    >
+                                        <div className="flex items-center justify-center space-x-1">
+                                            <span>Desired</span>
+                                            <SortIcon column="desired" search={search} />
+                                        </div>
                                     </th>
-                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
-                                        Current
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                                        onClick={() => handleSort('current')}
+                                    >
+                                        <div className="flex items-center justify-center space-x-1">
+                                            <span>Current</span>
+                                            <SortIcon column="current" search={search} />
+                                        </div>
                                     </th>
-                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
-                                        Deploying
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                                        onClick={() => handleSort('deploying')}
+                                    >
+                                        <div className="flex items-center justify-center space-x-1">
+                                            <span>Deploying</span>
+                                            <SortIcon column="deploying" search={search} />
+                                        </div>
                                     </th>
-                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
-                                        Total
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                                        onClick={() => handleSort('total')}
+                                    >
+                                        <div className="flex items-center justify-center space-x-1">
+                                            <span>Total</span>
+                                            <SortIcon column="total" search={search} />
+                                        </div>
                                     </th>
                                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
                                         Action
@@ -78,7 +148,7 @@ function ProblemsPage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {filteredProblems.map((problem) => (
+                                {sortedProblems.map((problem) => (
                                     <tr key={problem.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -114,7 +184,7 @@ function ProblemsPage() {
                                         </td>
                                     </tr>
                                 ))}
-                                {filteredProblems.length === 0 && (
+                                {sortedProblems.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                                             No problems found.
@@ -128,4 +198,11 @@ function ProblemsPage() {
             </div>
         </div>
     );
+}
+
+function SortIcon({ column, search }: { column: string, search: any }) {
+    if (search.sort !== column) return <ArrowUpDown className="w-3 h-3 opacity-30" />;
+    return search.dir === 'asc'
+        ? <ArrowUp className="w-3 h-3 text-indigo-500" />
+        : <ArrowDown className="w-3 h-3 text-indigo-500" />;
 }
