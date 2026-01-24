@@ -263,6 +263,27 @@ function ProblemEnvironmentDetailPage() {
                                     <div className="fixed inset-0 z-10" onClick={() => setIsActionMenuOpen(false)}></div>
                                     <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-20 focus:outline-none">
                                         <div className="py-1">
+                                            {env.metadata.ownerReferences?.find(ref => ref.kind === 'Problem') && (
+                                                <Link
+                                                    to="/problems/$problemName"
+                                                    params={{ problemName: env.metadata.ownerReferences.find(ref => ref.kind === 'Problem')!.name }}
+                                                    className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                >
+                                                    <Activity className="mr-3 h-4 w-4" />
+                                                    See Problem
+                                                </Link>
+                                            )}
+                                            {env.spec.workerName && (
+                                                <Link
+                                                    to="/workers/$workerName"
+                                                    params={{ workerName: env.spec.workerName }}
+                                                    className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                >
+                                                    <Server className="mr-3 h-4 w-4" />
+                                                    See Worker
+                                                </Link>
+                                            )}
+                                            <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
                                             <button
                                                 disabled={!isReady || !!isAssigned}
                                                 onClick={() => { setActiveModal('assign'); setIsActionMenuOpen(false); }}

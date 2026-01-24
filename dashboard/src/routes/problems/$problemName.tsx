@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { useState } from 'react';
 import { getProblem, getProblemEnvironments, getWorkers } from '../../data/k8s';
-import { ChevronLeft, Box, Activity, Network, FileCode } from 'lucide-react';
+import { ChevronLeft, Box, Activity, Network, FileCode, ChevronDown } from 'lucide-react';
 import { Tabs } from '../../components/Tabs';
 import { Card } from '../../components/Card';
 
@@ -18,6 +19,7 @@ export const Route = createFileRoute('/problems/$problemName')({
 
 function ProblemDetailPage() {
     const { problem, envsList, workers } = Route.useLoaderData();
+    const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
 
     const relatedEnvs = envsList.items.filter((env) => {
         return env.metadata.ownerReferences?.some(
@@ -219,13 +221,46 @@ function ProblemDetailPage() {
                         <ChevronLeft className="w-4 h-4 mr-1" />
                         Back to Problems
                     </Link>
-                    <div className="flex items-center space-x-3">
-                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
-                            <Box className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
+                        <div className="flex items-center space-x-3">
+                            <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
+                                <Box className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{problem.metadata.name}</h1>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Created on {new Date(problem.metadata.creationTimestamp).toLocaleDateString()}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{problem.metadata.name}</h1>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Created on {new Date(problem.metadata.creationTimestamp).toLocaleDateString()}</p>
+                        <div className="flex items-center">
+                            {/* Actions Dropdown */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
+                                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                                >
+                                    Actions
+                                    <ChevronDown className="ml-2 -mr-1 h-4 w-4" />
+                                </button>
+
+                                {isActionMenuOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-10" onClick={() => setIsActionMenuOpen(false)}></div>
+                                        <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-20 focus:outline-none">
+                                            <div className="py-1">
+                                                <Link
+                                                    to="/problem-environments"
+                                                    search={{ problem: [problem.metadata.name] }}
+                                                    className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                    onClick={() => setIsActionMenuOpen(false)}
+                                                >
+                                                    <Activity className="mr-3 h-4 w-4" />
+                                                    Search Environments
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
