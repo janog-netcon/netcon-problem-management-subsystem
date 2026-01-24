@@ -60,11 +60,20 @@ function ProblemsPage() {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Name
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Replicas (Total/Sched/Rdy/Asgn)
+                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                                        Desired
                                     </th>
-                                    <th scope="col" className="relative px-6 py-3">
-                                        <span className="sr-only">View</span>
+                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                                        Current
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                                        Deploying
+                                    </th>
+                                    <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                                        Total
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
+                                        Action
                                     </th>
                                 </tr>
                             </thead>
@@ -78,16 +87,25 @@ function ProblemsPage() {
                                                 </Link>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500 dark:text-gray-400 flex space-x-2">
-                                                <span title="Total" className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{problem.status?.replicas?.total ?? 0}</span>
-                                                <span>/</span>
-                                                <span title="Scheduled" className="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">{problem.status?.replicas?.scheduled ?? 0}</span>
-                                                <span>/</span>
-                                                <span title="Assignable (Ready)" className="px-2 py-1 rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">{problem.status?.replicas?.assignable ?? 0}</span>
-                                                <span>/</span>
-                                                <span title="Assigned" className="px-2 py-1 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">{problem.status?.replicas?.assigned ?? 0}</span>
-                                            </div>
+                                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                                            <span className="text-sm font-medium text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded">
+                                                {problem.spec.assignableReplicas}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                                            <span className="text-sm font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded">
+                                                {(problem.status?.replicas?.assignable ?? 0) + (problem.status?.replicas?.assigned ?? 0)}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                                            <span className="text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2.5 py-1 rounded">
+                                                {problem.status?.replicas?.scheduled ?? 0}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                                            <span className="text-sm font-medium text-purple-700 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 px-2.5 py-1 rounded">
+                                                {problem.status?.replicas?.total ?? 0}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <Link to="/problems/$problemName" params={{ problemName: problem.metadata.name }} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
@@ -98,7 +116,7 @@ function ProblemsPage() {
                                 ))}
                                 {filteredProblems.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                                             No problems found.
                                         </td>
                                     </tr>

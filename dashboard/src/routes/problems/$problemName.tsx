@@ -38,10 +38,10 @@ function ProblemDetailPage() {
             content: (
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <StatusCard label="Total Replicas" value={totalReplicas} color="gray" />
-                        <StatusCard label="Scheduled" value={scheduledReplicas} color="blue" />
-                        <StatusCard label="Assignable (Ready)" value={readyReplicas} color="green" />
-                        <StatusCard label="Assigned" value={problem.status?.replicas?.assigned ?? 0} color="purple" />
+                        <StatusCard label="Desired" value={problem.spec.assignableReplicas} color="gray" />
+                        <StatusCard label="Current" value={(problem.status?.replicas?.assignable ?? 0) + (problem.status?.replicas?.assigned ?? 0)} color="green" />
+                        <StatusCard label="Deploying" value={problem.status?.replicas?.scheduled ?? 0} color="blue" />
+                        <StatusCard label="Total" value={problem.status?.replicas?.total ?? 0} color="purple" />
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
