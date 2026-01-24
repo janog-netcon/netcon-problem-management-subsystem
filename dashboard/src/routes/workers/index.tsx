@@ -1,12 +1,10 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { getWorkers } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
-import { Pagination } from '../../components/Pagination';
 import { z } from 'zod';
 import { Server, Cpu, HardDrive, AlertCircle, CheckCircle } from 'lucide-react';
 
 const workerSearchSchema = z.object({
-    p: z.number().optional(),
     q: z.string().optional(),
 });
 
@@ -21,7 +19,7 @@ function WorkersPage() {
     const search = Route.useSearch();
     const navigate = useNavigate({ from: Route.fullPath });
 
-    const itemsPerPage = 20;
+
 
     // Client-side filtering
     const filteredWorkers = workersList.items.filter((worker) => {
@@ -29,29 +27,16 @@ function WorkersPage() {
         return worker.metadata.name.toLowerCase().includes(search.q.toLowerCase());
     });
 
-    const totalItems = filteredWorkers.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-    // Ensure current page is valid
-    const currentPage = Math.min(Math.max(1, search.p ?? 1), Math.max(1, totalPages));
-
-    const paginatedWorkers = filteredWorkers.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
 
     const handleSearch = (newQuery: string) => {
         navigate({
-            search: (prev) => ({ ...prev, q: newQuery || undefined, p: undefined }),
+            search: (prev) => ({ ...prev, q: newQuery || undefined }),
             replace: true,
         });
     };
 
-    const handlePageChange = (newPage: number) => {
-        navigate({
-            search: (prev) => ({ ...prev, p: newPage === 1 ? undefined : newPage }),
-        });
-    };
+
 
     return (
         <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -94,7 +79,7 @@ function WorkersPage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {paginatedWorkers.map((worker) => {
+                                {filteredWorkers.map((worker) => {
                                     const isReady = worker.status?.conditions?.some(c => c.type === 'Ready' && c.status === 'True');
                                     const cpuUsage = parseFloat(worker.status?.workerInfo?.cpuUsedPercent || '0');
                                     const memUsage = parseFloat(worker.status?.workerInfo?.memoryUsedPercent || '0');
@@ -178,7 +163,7 @@ function WorkersPage() {
                                         </tr>
                                     );
                                 })}
-                                {paginatedWorkers.length === 0 && (
+                                {filteredWorkers.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                                             No workers found.
@@ -188,7 +173,6 @@ function WorkersPage() {
                             </tbody>
                         </table>
                     </div>
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
                 </div>
             </div>
         </div>

@@ -1,11 +1,9 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { getProblems } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
-import { Pagination } from '../../components/Pagination';
 import { z } from 'zod';
 
 const problemSearchSchema = z.object({
-    p: z.number().optional(),
     q: z.string().optional(),
 });
 
@@ -20,7 +18,7 @@ function ProblemsPage() {
     const search = Route.useSearch();
     const navigate = useNavigate({ from: Route.fullPath });
 
-    const itemsPerPage = 20;
+
 
     // Client-side filtering
     const filteredProblems = problemsList.items.filter((problem) => {
@@ -28,29 +26,16 @@ function ProblemsPage() {
         return problem.metadata.name.toLowerCase().includes(search.q.toLowerCase());
     });
 
-    const totalItems = filteredProblems.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-    // Ensure current page is valid
-    const currentPage = Math.min(Math.max(1, search.p ?? 1), Math.max(1, totalPages));
-
-    const paginatedProblems = filteredProblems.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
 
     const handleSearch = (newQuery: string) => {
         navigate({
-            search: (prev) => ({ ...prev, q: newQuery || undefined, p: undefined }),
+            search: (prev) => ({ ...prev, q: newQuery || undefined }),
             replace: true,
         });
     };
 
-    const handlePageChange = (newPage: number) => {
-        navigate({
-            search: (prev) => ({ ...prev, p: newPage === 1 ? undefined : newPage }),
-        });
-    };
+
 
     return (
         <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -84,7 +69,7 @@ function ProblemsPage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {paginatedProblems.map((problem) => (
+                                {filteredProblems.map((problem) => (
                                     <tr key={problem.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -111,7 +96,7 @@ function ProblemsPage() {
                                         </td>
                                     </tr>
                                 ))}
-                                {paginatedProblems.length === 0 && (
+                                {filteredProblems.length === 0 && (
                                     <tr>
                                         <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                                             No problems found.
@@ -121,7 +106,6 @@ function ProblemsPage() {
                             </tbody>
                         </table>
                     </div>
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
                 </div>
             </div>
         </div>
