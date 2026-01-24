@@ -106,6 +106,14 @@ function WorkerDetailPage() {
                                     </dd>
                                 </div>
                                 <div className="sm:col-span-1">
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Worker Class</dt>
+                                    <dd className="mt-1 text-sm text-gray-900 dark:text-white">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                                            {worker.metadata.labels?.['netcon.janog.gr.jp/workerClass'] || '-'}
+                                        </span>
+                                    </dd>
+                                </div>
+                                <div className="sm:col-span-1">
                                     <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
                                     <dd className="mt-1 text-sm text-gray-900 dark:text-white">
                                         {worker.status?.conditions?.map(cond => (
