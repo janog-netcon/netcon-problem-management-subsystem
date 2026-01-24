@@ -21,13 +21,15 @@ function DashboardHome() {
   const envCount = envs.items.length;
   const workerCount = workers.items.length;
 
-  const deployedEnvs = envs.items.filter(e =>
-    e.status?.conditions?.some(c => c.type === 'Deployed' && c.status === 'True')
+  const assignedEnvs = envs.items.filter(e =>
+    e.status?.conditions?.some(c => c.type === 'Assigned' && c.status === 'True')
   ).length;
 
-  const readyEnvs = envs.items.filter(e =>
-    e.status?.conditions?.some(c => c.type === 'Ready' && c.status === 'True')
-  ).length;
+  const readyEnvs = envs.items.filter(e => {
+    const isReady = e.status?.conditions?.some(c => c.type === 'Ready' && c.status === 'True');
+    const isAssigned = e.status?.conditions?.some(c => c.type === 'Assigned' && c.status === 'True');
+    return isReady && !isAssigned;
+  }).length;
 
   return (
     <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -48,7 +50,7 @@ function DashboardHome() {
           <SummaryCard
             title="Environments"
             count={envCount}
-            subtext={`${readyEnvs} Ready / ${deployedEnvs} Deployed`}
+            subtext={`${assignedEnvs} Assigned / ${readyEnvs} Ready`}
             icon={<Layers className="w-8 h-8 text-white" />}
             color="bg-teal-500"
             link="/problem-environments"

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router';
-import { getProblemEnvironments, getProblems, getWorkers, ProblemEnvironment } from '../../data/k8s';
+import { getProblemEnvironments, getProblems, getWorkers } from '../../data/k8s';
+import { getStatusColor, getStatusText } from '../../data/status';
 import { SearchBar } from '../../components/SearchBar';
 import { Pagination } from '../../components/Pagination';
 import { MultiSelect } from '../../components/MultiSelect';
@@ -30,32 +31,6 @@ export const Route = createFileRoute('/problem-environments/')({
     shouldReload: false,
 });
 
-// Helper to determine status color based on conditions
-const getStatusColor = (status: ProblemEnvironment['status']) => {
-    const isReady = status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
-    if (isReady) return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
-
-    const isDeployed = status?.conditions?.find(c => c.type === 'Deployed' && c.status === 'True');
-    if (isDeployed) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
-
-    const isScheduled = status?.conditions?.find(c => c.type === 'Scheduled' && c.status === 'True');
-    if (isScheduled) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
-
-    return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
-};
-
-const getStatusText = (status: ProblemEnvironment['status']) => {
-    const isReady = status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
-    if (isReady) return 'Ready';
-
-    const isDeployed = status?.conditions?.find(c => c.type === 'Deployed' && c.status === 'True');
-    if (isDeployed) return 'Deployed';
-
-    const isScheduled = status?.conditions?.find(c => c.type === 'Scheduled' && c.status === 'True');
-    if (isScheduled) return 'Scheduled';
-
-    return 'Unknown';
-};
 
 function ProblemEnvironmentsPage() {
     const { envs, problems, workers, updatedAt } = Route.useLoaderData();
@@ -164,7 +139,7 @@ function ProblemEnvironmentsPage() {
 
                             <MultiSelect
                                 label="Status"
-                                options={['Ready', 'Deployed', 'Scheduled', 'Unknown'].map(s => ({ label: s, value: s }))}
+                                options={['Assigned', 'Ready', 'Deploying'].map(s => ({ label: s, value: s }))}
                                 selectedValues={search.status || []}
                                 onChange={(value) => handleFilterChange('status', value)}
                                 placeholder="All Statuses"

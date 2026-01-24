@@ -6,7 +6,7 @@ import { ArrowUp, ArrowDown, ArrowUpDown, RefreshCw } from 'lucide-react';
 
 const problemSearchSchema = z.object({
     q: z.string().optional(),
-    sort: z.enum(['desired', 'current', 'deploying', 'total']).optional(),
+    sort: z.enum(['desired', 'ready', 'assigned', 'deploying', 'total']).optional(),
     dir: z.enum(['asc', 'desc']).optional(),
 });
 
@@ -44,8 +44,9 @@ function ProblemsPage() {
         const getVal = (p: typeof a) => {
             switch (search.sort) {
                 case 'desired': return p.spec.assignableReplicas;
-                case 'current': return (p.status?.replicas?.assignable ?? 0) + (p.status?.replicas?.assigned ?? 0);
-                case 'deploying': return p.status?.replicas?.scheduled ?? 0;
+                case 'ready': return p.status?.replicas?.assignable ?? 0;
+                case 'assigned': return p.status?.replicas?.assigned ?? 0;
+                case 'deploying': return (p.status?.replicas?.total ?? 0) - ((p.status?.replicas?.assignable ?? 0) + (p.status?.replicas?.assigned ?? 0));
                 case 'total': return p.status?.replicas?.total ?? 0;
                 default: return 0;
             }
@@ -68,7 +69,7 @@ function ProblemsPage() {
         });
     };
 
-    const handleSort = (column: 'desired' | 'current' | 'deploying' | 'total') => {
+    const handleSort = (column: 'desired' | 'ready' | 'assigned' | 'deploying' | 'total') => {
         navigate({
             search: (prev) => {
                 if (prev.sort === column) {
@@ -135,11 +136,21 @@ function ProblemsPage() {
                                     <th
                                         scope="col"
                                         className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                                        onClick={() => handleSort('current')}
+                                        onClick={() => handleSort('ready')}
                                     >
                                         <div className="flex items-center justify-center space-x-1">
-                                            <span>Current</span>
-                                            <SortIcon column="current" search={search} />
+                                            <span>Ready</span>
+                                            <SortIcon column="ready" search={search} />
+                                        </div>
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                                        onClick={() => handleSort('assigned')}
+                                    >
+                                        <div className="flex items-center justify-center space-x-1">
+                                            <span>Assigned</span>
+                                            <SortIcon column="assigned" search={search} />
                                         </div>
                                     </th>
                                     <th
@@ -184,12 +195,17 @@ function ProblemsPage() {
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap text-center">
                                             <span className="text-sm font-medium text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2.5 py-1 rounded">
-                                                {(problem.status?.replicas?.assignable ?? 0) + (problem.status?.replicas?.assigned ?? 0)}
+                                                {problem.status?.replicas?.assignable ?? 0}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4 whitespace-nowrap text-center">
+                                            <span className="text-sm font-medium text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/30 px-2.5 py-1 rounded">
+                                                {problem.status?.replicas?.assigned ?? 0}
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap text-center">
                                             <span className="text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2.5 py-1 rounded">
-                                                {problem.status?.replicas?.scheduled ?? 0}
+                                                {(problem.status?.replicas?.total ?? 0) - ((problem.status?.replicas?.assignable ?? 0) + (problem.status?.replicas?.assigned ?? 0))}
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap text-center">

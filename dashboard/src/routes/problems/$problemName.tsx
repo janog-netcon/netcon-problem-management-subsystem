@@ -26,9 +26,6 @@ function ProblemDetailPage() {
     });
 
     // Calculate stats
-    const totalReplicas = problem.status?.replicas?.total ?? 0;
-    const scheduledReplicas = problem.status?.replicas?.scheduled ?? 0;
-    const readyReplicas = problem.status?.replicas?.assignable ?? 0;
 
     const tabs = [
         {
@@ -37,10 +34,11 @@ function ProblemDetailPage() {
             icon: <Activity className="w-4 h-4" />,
             content: (
                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
                         <StatusCard label="Desired" value={problem.spec.assignableReplicas} color="gray" />
-                        <StatusCard label="Current" value={(problem.status?.replicas?.assignable ?? 0) + (problem.status?.replicas?.assigned ?? 0)} color="green" />
-                        <StatusCard label="Deploying" value={problem.status?.replicas?.scheduled ?? 0} color="blue" />
+                        <StatusCard label="Ready" value={problem.status?.replicas?.assignable ?? 0} color="green" />
+                        <StatusCard label="Assigned" value={problem.status?.replicas?.assigned ?? 0} color="indigo" />
+                        <StatusCard label="Deploying" value={(problem.status?.replicas?.total ?? 0) - ((problem.status?.replicas?.assignable ?? 0) + (problem.status?.replicas?.assigned ?? 0))} color="blue" />
                         <StatusCard label="Total" value={problem.status?.replicas?.total ?? 0} color="purple" />
                     </div>
 
@@ -244,6 +242,7 @@ function StatusCard({ label, value, color }: { label: string, value: number, col
         blue: 'bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 border-blue-200 dark:border-blue-900',
         green: 'bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-200 border-green-200 dark:border-green-900',
         purple: 'bg-purple-50 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200 border-purple-200 dark:border-purple-900',
+        indigo: 'bg-indigo-50 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 border-indigo-200 dark:border-indigo-900',
     };
 
     return (

@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { getProblemEnvironment, getDeploymentLog, assignProblemEnvironment, unassignProblemEnvironment, deleteProblemEnvironment } from '../../data/k8s';
-import { ChevronLeft, Server, Activity, Terminal, Key, PlayCircle, CheckCircle, Clock, FileText, FileCode, ChevronDown, UserPlus, UserMinus, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { getStatusColor, getStatusText } from '../../data/status';
+import { ChevronLeft, Server, Activity, Terminal, Key, CheckCircle, Clock, FileText, FileCode, ChevronDown, UserPlus, UserMinus, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { CopyButton } from '../../components/CopyButton';
 import { AnsiText } from '../../components/AnsiText';
@@ -98,10 +99,9 @@ function ProblemEnvironmentDetailPage() {
                     <div className="lg:col-span-2">
                         <Card title={<><Activity className="w-5 h-5 mr-2" /> Timeline</>}>
                             <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-6 pb-2">
-                                {['Scheduled', 'Deployed', 'Ready'].map((type, idx) => {
+                                {['Scheduled', 'Deployed', 'Ready', 'Assigned'].map((type) => {
                                     const cond = env.status?.conditions?.find(c => c.type === type);
                                     const isCompleted = cond?.status === 'True';
-                                    const isCurrent = !isCompleted && (idx === 0 || env.status?.conditions?.some(c => c.type === ['Scheduled', 'Deployed', 'Ready'][idx - 1] && c.status === 'True')); // Rough logic
 
                                     let Icon = Clock;
                                     let colorClass = 'text-gray-400 bg-gray-100 dark:bg-gray-800';
@@ -109,9 +109,6 @@ function ProblemEnvironmentDetailPage() {
                                     if (isCompleted) {
                                         Icon = CheckCircle;
                                         colorClass = 'text-green-500 bg-green-100 dark:bg-green-900/30';
-                                    } else if (isCurrent) {
-                                        Icon = PlayCircle;
-                                        colorClass = 'text-blue-500 bg-blue-100 dark:bg-blue-900/30';
                                     }
 
                                     return (
@@ -121,7 +118,7 @@ function ProblemEnvironmentDetailPage() {
                                             </span>
                                             <div className="flex flex-col">
                                                 <span className={`text-sm font-medium ${isCompleted ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>{type}</span>
-                                                {cond?.lastTransitionTime && (
+                                                {cond?.lastTransitionTime && cond.status === 'True' && (
                                                     <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(cond.lastTransitionTime).toLocaleString()}</span>
                                                 )}
                                             </div>
@@ -210,7 +207,12 @@ function ProblemEnvironmentDetailPage() {
                                 <Server className="w-8 h-8 text-teal-600 dark:text-teal-400" />
                             </div>
                             <div>
-                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{env.metadata.name}</h1>
+                                <div className="flex items-center space-x-2">
+                                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{env.metadata.name}</h1>
+                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(env.status)}`}>
+                                        {getStatusText(env.status)}
+                                    </span>
+                                </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
                                     Deployed on <span className="font-medium text-gray-900 dark:text-gray-300">{env.spec.workerName || 'Pending'}</span>
                                 </p>
