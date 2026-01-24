@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
-import { getProblemEnvironment, getDeploymentLog } from '../../data/k8s';
-import { ChevronLeft, Server, Activity, Terminal, Key, PlayCircle, CheckCircle, Clock, FileText, FileCode } from 'lucide-react';
+import { getProblemEnvironment, getDeploymentLog, assignProblemEnvironment, unassignProblemEnvironment, deleteProblemEnvironment } from '../../data/k8s';
+import { ChevronLeft, Server, Activity, Terminal, Key, PlayCircle, CheckCircle, Clock, FileText, FileCode, ChevronDown, UserPlus, UserMinus, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { CopyButton } from '../../components/CopyButton';
 import { AnsiText } from '../../components/AnsiText';
@@ -20,6 +20,42 @@ export const Route = createFileRoute('/problem-environments/$envName')({
 
 function ProblemEnvironmentDetailPage() {
     const { env, deployLog } = Route.useLoaderData();
+    const router = useRouter();
+    const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+    const [activeModal, setActiveModal] = useState<'assign' | 'unassign' | 'delete' | null>(null);
+    const [confirmName, setConfirmName] = useState('');
+    const [isAssignedDeleteConfirmed, setIsAssignedDeleteConfirmed] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const isReady = env.status?.conditions?.find(c => c.type === 'Ready' && c.status === 'True');
+    const isAssigned = env.status?.conditions?.find(c => c.type === 'Assigned' && c.status === 'True');
+
+    const handleAction = async (action: 'assign' | 'unassign' | 'delete') => {
+        if (confirmName !== env.metadata.name) return;
+        if (action === 'delete' && isAssigned && !isAssignedDeleteConfirmed) return;
+
+        setIsProcessing(true);
+        try {
+            if (action === 'assign') {
+                await assignProblemEnvironment({ data: env.metadata.name });
+            } else if (action === 'unassign') {
+                await unassignProblemEnvironment({ data: env.metadata.name });
+            } else if (action === 'delete') {
+                await deleteProblemEnvironment({ data: env.metadata.name });
+                router.navigate({ to: '/problem-environments' });
+                return;
+            }
+            await router.invalidate();
+            setActiveModal(null);
+            setConfirmName('');
+            setIsAssignedDeleteConfirmed(false);
+        } catch (err) {
+            console.error(`Failed to perform ${action}:`, err);
+            alert(`Failed to perform ${action}`);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     // Helper to extract management IP
     const managementIP = env.status?.containers?.find(c => c.managementIPAddress)?.managementIPAddress;
@@ -168,21 +204,175 @@ function ProblemEnvironmentDetailPage() {
                         <ChevronLeft className="w-4 h-4 mr-1" />
                         Back to Environments
                     </Link>
-                    <div className="flex items-center space-x-3">
-                        <div className="p-3 bg-teal-100 dark:bg-teal-900/50 rounded-lg">
-                            <Server className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div className="flex items-center space-x-3">
+                            <div className="p-3 bg-teal-100 dark:bg-teal-900/50 rounded-lg">
+                                <Server className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{env.metadata.name}</h1>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Deployed on <span className="font-medium text-gray-900 dark:text-gray-300">{env.spec.workerName || 'Pending'}</span>
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{env.metadata.name}</h1>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Deployed on <span className="font-medium text-gray-900 dark:text-gray-300">{env.spec.workerName || 'Pending'}</span>
-                            </p>
+
+                        {/* Actions Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
+                                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                            >
+                                Actions
+                                <ChevronDown className="ml-2 -mr-1 h-4 w-4" />
+                            </button>
+
+                            {isActionMenuOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-10" onClick={() => setIsActionMenuOpen(false)}></div>
+                                    <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-20 focus:outline-none">
+                                        <div className="py-1">
+                                            <button
+                                                disabled={!isReady || !!isAssigned}
+                                                onClick={() => { setActiveModal('assign'); setIsActionMenuOpen(false); }}
+                                                className={`flex items-center w-full px-4 py-2 text-sm text-left ${(!isReady || !!isAssigned) ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                            >
+                                                <UserPlus className="mr-3 h-4 w-4" />
+                                                Assign Environment
+                                            </button>
+                                            <button
+                                                disabled={!isAssigned}
+                                                onClick={() => { setActiveModal('unassign'); setIsActionMenuOpen(false); }}
+                                                className={`flex items-center w-full px-4 py-2 text-sm text-left ${!isAssigned ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                            >
+                                                <UserMinus className="mr-3 h-4 w-4" />
+                                                Unassign Environment
+                                            </button>
+                                            <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+                                            <button
+                                                onClick={() => { setActiveModal('delete'); setIsActionMenuOpen(false); }}
+                                                className="flex items-center w-full px-4 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                            >
+                                                <Trash2 className="mr-3 h-4 w-4" />
+                                                Delete Environment
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 <Tabs tabs={tabs} />
             </div>
+
+            {/* Modals */}
+            {activeModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                        aria-hidden="true"
+                        onClick={() => setActiveModal(null)}
+                    />
+
+                    {/* Modal Centerer */}
+                    <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                        <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                            <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100 dark:border-gray-700">
+                                <div className="sm:flex sm:items-start">
+                                    <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10 ${activeModal === 'delete' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-indigo-100 dark:bg-indigo-900/30'}`}>
+                                        {activeModal === 'delete' ? (
+                                            <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+                                        ) : activeModal === 'assign' ? (
+                                            <UserPlus className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                                        ) : (
+                                            <UserMinus className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                                        )}
+                                    </div>
+                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                        <h3 className="text-lg leading-6 font-bold text-gray-900 dark:text-white">
+                                            {activeModal === 'assign' ? 'Assign Environment' : activeModal === 'unassign' ? 'Unassign Environment' : 'Delete Environment'}
+                                        </h3>
+                                        <div className="mt-2">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                {activeModal === 'assign'
+                                                    ? 'This will mark the environment as assigned. Are you sure?'
+                                                    : activeModal === 'unassign'
+                                                        ? 'This will unassign the environment. Are you sure?'
+                                                        : 'This action cannot be undone. This will permanently delete the environment configuration and all associated resources.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-4 py-5 sm:p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        To confirm, type <span className="font-mono font-bold select-none text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-1 rounded">{env.metadata.name}</span> in the box below:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={confirmName}
+                                        onChange={(e) => setConfirmName(e.target.value)}
+                                        className="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 cursor-text relative z-20"
+                                        placeholder={env.metadata.name}
+                                        autoFocus
+                                    />
+                                </div>
+
+                                {activeModal === 'delete' && isAssigned && (
+                                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-md">
+                                        <div className="flex">
+                                            <div className="flex-shrink-0">
+                                                <AlertTriangle className="h-5 w-5 text-red-400" aria-hidden="true" />
+                                            </div>
+                                            <div className="ml-3">
+                                                <h3 className="text-sm font-medium text-red-800 dark:text-red-300">Warning: Environment is Assigned</h3>
+                                                <div className="mt-2">
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            id="confirm-assigned-delete"
+                                                            type="checkbox"
+                                                            checked={isAssignedDeleteConfirmed}
+                                                            onChange={(e) => setIsAssignedDeleteConfirmed(e.target.checked)}
+                                                            className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded cursor-pointer"
+                                                        />
+                                                        <label htmlFor="confirm-assigned-delete" className="ml-2 block text-sm text-red-700 dark:text-red-400 cursor-pointer">
+                                                            I am sure I want to delete an ASSIGNED environment
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
+                                <button
+                                    type="button"
+                                    disabled={confirmName !== env.metadata.name || (activeModal === 'delete' && isAssigned && !isAssignedDeleteConfirmed) || isProcessing}
+                                    onClick={() => handleAction(activeModal)}
+                                    className={`w-full inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm sm:w-auto sm:text-sm ${activeModal === 'delete' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'} ${(confirmName !== env.metadata.name || (activeModal === 'delete' && isAssigned && !isAssignedDeleteConfirmed) || isProcessing) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    {isProcessing && <RefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />}
+                                    Confirm {activeModal === 'delete' ? 'Delete' : activeModal === 'assign' ? 'Assign' : 'Unassign'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setActiveModal(null); setConfirmName(''); setIsAssignedDeleteConfirmed(false); }}
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-base font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

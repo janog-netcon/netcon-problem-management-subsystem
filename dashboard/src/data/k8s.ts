@@ -279,3 +279,141 @@ export const getDeploymentLog = createServerFn({ method: "GET" })
             return null;
         }
     });
+export const deleteProblemEnvironment = createServerFn({ method: "POST" })
+    .inputValidator((name: string) => name)
+    .handler(async ({ data: name }) => {
+        try {
+            const customApi = await getApiClient();
+            await customApi.deleteNamespacedCustomObject({
+                group: GROUP,
+                version: VERSION,
+                namespace: NAMESPACE,
+                plural: 'problemenvironments',
+                name: name
+            });
+            return { success: true };
+        } catch (err: any) {
+            console.error(`Failed to delete problem environment ${name}:`, err);
+            throw err;
+        }
+    });
+
+export const assignProblemEnvironment = createServerFn({ method: "POST" })
+    .inputValidator((name: string) => name)
+    .handler(async ({ data: name }) => {
+        try {
+            const customApi = await getApiClient();
+            const env = await customApi.getNamespacedCustomObject({
+                group: GROUP,
+                version: VERSION,
+                namespace: NAMESPACE,
+                plural: 'problemenvironments',
+                name: name,
+            }) as ProblemEnvironment;
+
+            const conditions = env.status?.conditions || [];
+            const now = new Date().toISOString();
+
+            // Find or create Assigned condition
+            const assignedIdx = conditions.findIndex((c: any) => c.type === 'Assigned');
+            const newCondition = {
+                type: 'Assigned',
+                status: 'True',
+                lastTransitionTime: now,
+                reason: 'AdminUpdated',
+                message: 'assigned by admin forcibly'
+            };
+
+            if (assignedIdx >= 0) {
+                conditions[assignedIdx] = newCondition;
+            } else {
+                conditions.push(newCondition);
+            }
+
+            // Using JSON Patch (array of ops) instead of Merge Patch because the
+            // library defaults to 'application/json-patch+json' and the server
+            // expects an array for that content type.
+            await customApi.patchNamespacedCustomObjectStatus({
+                group: GROUP,
+                version: VERSION,
+                namespace: NAMESPACE,
+                plural: 'problemenvironments',
+                name: name,
+                body: [
+                    {
+                        op: 'replace',
+                        path: '/status',
+                        value: {
+                            ...(env.status || {}),
+                            conditions: conditions
+                        }
+                    }
+                ]
+            });
+
+            return { success: true };
+        } catch (err: any) {
+            console.error(`Failed to assign problem environment ${name}:`, err);
+            throw err;
+        }
+    });
+
+export const unassignProblemEnvironment = createServerFn({ method: "POST" })
+    .inputValidator((name: string) => name)
+    .handler(async ({ data: name }) => {
+        try {
+            const customApi = await getApiClient();
+            const env = await customApi.getNamespacedCustomObject({
+                group: GROUP,
+                version: VERSION,
+                namespace: NAMESPACE,
+                plural: 'problemenvironments',
+                name: name,
+            }) as ProblemEnvironment;
+
+            const conditions = env.status?.conditions || [];
+            const now = new Date().toISOString();
+
+            // Find or create Assigned condition
+            const assignedIdx = conditions.findIndex((c: any) => c.type === 'Assigned');
+            const newCondition = {
+                type: 'Assigned',
+                status: 'False',
+                lastTransitionTime: now,
+                reason: 'AdminUpdated',
+                message: 'unassigned by admin forcibly'
+            };
+
+            if (assignedIdx >= 0) {
+                conditions[assignedIdx] = newCondition;
+            } else {
+                conditions.push(newCondition);
+            }
+
+            // Using JSON Patch (array of ops) instead of Merge Patch because the
+            // library defaults to 'application/json-patch+json' and the server
+            // expects an array for that content type.
+            await customApi.patchNamespacedCustomObjectStatus({
+                group: GROUP,
+                version: VERSION,
+                namespace: NAMESPACE,
+                plural: 'problemenvironments',
+                name: name,
+                body: [
+                    {
+                        op: 'replace',
+                        path: '/status',
+                        value: {
+                            ...(env.status || {}),
+                            conditions: conditions
+                        }
+                    }
+                ]
+            });
+
+            return { success: true };
+        } catch (err: any) {
+            console.error(`Failed to unassign problem environment ${name}:`, err);
+            throw err;
+        }
+    });
