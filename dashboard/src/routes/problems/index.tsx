@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router';
 import { getProblems } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
 import { z } from 'zod';
@@ -173,19 +173,18 @@ function ProblemsPage() {
                                             <SortIcon column="total" search={search} />
                                         </div>
                                     </th>
-                                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
-                                        Action
-                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                 {sortedProblems.map((problem) => (
-                                    <tr key={problem.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                    <tr
+                                        key={problem.metadata.name}
+                                        onClick={() => navigate({ to: '/problems/$problemName', params: { problemName: problem.metadata.name } })}
+                                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                                    >
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                <Link to="/problems/$problemName" params={{ problemName: problem.metadata.name }} className="hover:underline text-indigo-600 dark:text-indigo-400">
-                                                    {problem.metadata.name}
-                                                </Link>
+                                                {problem.metadata.name}
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 whitespace-nowrap text-center">
@@ -213,11 +212,6 @@ function ProblemsPage() {
                                                 {problem.status?.replicas?.total ?? 0}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link to="/problems/$problemName" params={{ problemName: problem.metadata.name }} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                                                Details
-                                            </Link>
-                                        </td>
                                     </tr>
                                 ))}
                                 {sortedProblems.length === 0 && (
@@ -232,7 +226,7 @@ function ProblemsPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

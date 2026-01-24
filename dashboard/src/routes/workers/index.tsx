@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router';
 import { getWorkers } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
 import { z } from 'zod';
@@ -96,9 +96,6 @@ function WorkersPage() {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Address
                                     </th>
-                                    <th scope="col" className="relative px-6 py-3">
-                                        <span className="sr-only">View</span>
-                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -108,7 +105,11 @@ function WorkersPage() {
                                     const memUsage = parseFloat(worker.status?.workerInfo?.memoryUsedPercent || '0');
 
                                     return (
-                                        <tr key={worker.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                        <tr
+                                            key={worker.metadata.name}
+                                            onClick={() => navigate({ to: '/workers/$workerName', params: { workerName: worker.metadata.name } })}
+                                            className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                                        >
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center">
                                                     <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
@@ -116,9 +117,7 @@ function WorkersPage() {
                                                     </div>
                                                     <div className="ml-4">
                                                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                            <Link to="/workers/$workerName" params={{ workerName: worker.metadata.name }} className="hover:underline text-indigo-600 dark:text-indigo-400">
-                                                                {worker.metadata.name}
-                                                            </Link>
+                                                            {worker.metadata.name}
                                                         </div>
                                                         <div className="text-sm text-gray-500 dark:text-gray-400">
                                                             {worker.status?.workerInfo?.hostname}
@@ -182,11 +181,6 @@ function WorkersPage() {
                                                     <span>{worker.status?.workerInfo?.externalIPAddress}</span>
                                                     <span className="text-xs text-gray-400">Port: {worker.status?.workerInfo?.externalPort}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <Link to="/workers/$workerName" params={{ workerName: worker.metadata.name }} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                                                    Details
-                                                </Link>
                                             </td>
                                         </tr>
                                     );

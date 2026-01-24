@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router';
 import { getProblemEnvironments, getProblems, getWorkers } from '../../data/k8s';
 import { getStatusColor, getStatusText } from '../../data/status';
 import { SearchBar } from '../../components/SearchBar';
@@ -173,17 +173,18 @@ function ProblemEnvironmentsPage() {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Worker</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Main Status</th>
-                                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">View</span></th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                 {paginatedEnvs.map((env) => (
-                                    <tr key={env.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                    <tr
+                                        key={env.metadata.name}
+                                        onClick={() => navigate({ to: '/problem-environments/$envName', params: { envName: env.metadata.name } })}
+                                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                                    >
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="hover:underline text-indigo-600 dark:text-indigo-400">
-                                                    {env.metadata.name}
-                                                </Link>
+                                                {env.metadata.name}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -194,16 +195,11 @@ function ProblemEnvironmentsPage() {
                                                 {getStatusText(env.status)}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                                                Details
-                                            </Link>
-                                        </td>
                                     </tr>
                                 ))}
                                 {paginatedEnvs.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        <td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                                             No environments found.
                                         </td>
                                     </tr>
