@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { getWorker, getProblemEnvironments, updateWorkerSchedule } from '../../data/k8s';
+import yaml from 'js-yaml';
+import { cleanManifest } from '../../utils/manifest';
 import { ChevronLeft, Server, Activity, Box, FileCode, Cpu, HardDrive, ChevronDown, CalendarCheck, CalendarX, RefreshCw, LineChart } from 'lucide-react';
 import { Tabs } from '../../components/Tabs';
 import { Card } from '../../components/Card';
@@ -207,13 +209,13 @@ function WorkerDetailPage() {
             ),
         },
         {
-            id: 'yaml',
-            label: 'YAML',
+            id: 'manifest',
+            label: 'Manifest',
             icon: <FileCode className="w-4 h-4" />,
             content: (
-                <Card title="Raw Resource">
+                <Card title="Resource Manifest">
                     <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-xs font-mono">
-                        {JSON.stringify(worker, null, 2)}
+                        {yaml.dump(cleanManifest(worker))}
                     </pre>
                 </Card>
             )

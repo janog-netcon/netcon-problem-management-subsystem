@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { getProblemEnvironment, getDeploymentLog, assignProblemEnvironment, unassignProblemEnvironment, deleteProblemEnvironment, getWorker } from '../../data/k8s';
+import yaml from 'js-yaml';
+import { cleanManifest } from '../../utils/manifest';
 import { getStatusColor, getStatusText } from '../../data/status';
 import { ChevronLeft, Server, Activity, Terminal, Key, CheckCircle, Clock, FileText, FileCode, ChevronDown, UserPlus, UserMinus, Trash2, AlertTriangle, RefreshCw, ShieldCheck, User, LineChart } from 'lucide-react';
 import { Card } from '../../components/Card';
@@ -208,13 +210,13 @@ function ProblemEnvironmentDetailPage() {
             )
         },
         {
-            id: 'yaml',
-            label: 'YAML',
+            id: 'manifest',
+            label: 'Manifest',
             icon: <FileCode className="w-4 h-4" />,
             content: (
-                <Card title="Raw Resource">
+                <Card title="Resource Manifest">
                     <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-xs font-mono max-h-[600px]">
-                        {JSON.stringify(env, null, 2)}
+                        {yaml.dump(cleanManifest(env))}
                     </pre>
                 </Card>
             )
