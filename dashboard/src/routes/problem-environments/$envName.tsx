@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
-import { getProblemEnvironment, getDeploymentLog, assignProblemEnvironment, unassignProblemEnvironment, deleteProblemEnvironment } from '../../data/k8s';
+import { getProblemEnvironment, getDeploymentLog, assignProblemEnvironment, unassignProblemEnvironment, deleteProblemEnvironment, getWorker } from '../../data/k8s';
 import { getStatusColor, getStatusText } from '../../data/status';
-import { ChevronLeft, Server, Activity, Terminal, Key, CheckCircle, Clock, FileText, FileCode, ChevronDown, UserPlus, UserMinus, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Server, Activity, Terminal, Key, CheckCircle, Clock, FileText, FileCode, ChevronDown, UserPlus, UserMinus, Trash2, AlertTriangle, RefreshCw, ShieldCheck, User } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { CopyButton } from '../../components/CopyButton';
 import { AnsiText } from '../../components/AnsiText';
@@ -15,12 +15,22 @@ export const Route = createFileRoute('/problem-environments/$envName')({
             getProblemEnvironment({ data: params.envName }),
             getDeploymentLog({ data: params.envName })
         ]);
-        return { env, deployLog };
+
+        let worker = null;
+        if (env.spec.workerName) {
+            try {
+                worker = await getWorker({ data: env.spec.workerName });
+            } catch (err) {
+                console.error(`Failed to fetch worker ${env.spec.workerName}:`, err);
+            }
+        }
+
+        return { env, deployLog, worker };
     },
 });
 
 function ProblemEnvironmentDetailPage() {
-    const { env, deployLog } = Route.useLoaderData();
+    const { env, deployLog, worker } = Route.useLoaderData();
     const router = useRouter();
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
     const [activeModal, setActiveModal] = useState<'assign' | 'unassign' | 'delete' | null>(null);
@@ -58,9 +68,18 @@ function ProblemEnvironmentDetailPage() {
         }
     };
 
-    // Helper to extract management IP
-    const managementIP = env.status?.containers?.find(c => c.managementIPAddress)?.managementIPAddress;
-    const sshCommand = managementIP ? `ssh user@${managementIP}` : 'IP not available';
+    // Helper to extract SSH info from worker
+    const workerIP = worker?.status?.workerInfo?.externalIPAddress;
+    const workerPort = worker?.status?.workerInfo?.externalPort;
+    const envName = env.metadata.name;
+
+    const userSSHCommand = workerIP && workerPort
+        ? `ssh nc_${envName}@${workerIP} -p ${workerPort}`
+        : 'Worker info not available';
+
+    const adminSSHCommand = workerIP && workerPort
+        ? `ssh ncadmin_${envName}@${workerIP} -p ${workerPort}`
+        : 'Worker info not available';
 
     const tabs = [
         {
@@ -74,20 +93,30 @@ function ProblemEnvironmentDetailPage() {
                         <Card title={<><Key className="w-5 h-5 mr-2" /> Connection Info</>}>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">SSH Command</label>
-                                    <div className="mt-1 flex rounded-md shadow-sm">
-                                        <div className="relative flex-grow focus-within:z-10">
-                                            <input type="text" readOnly value={sshCommand} className="focus:ring-indigo-500 focus:border-indigo-500 block w-full rounded-none rounded-l-md sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white px-3 py-2 font-mono" />
-                                        </div>
-                                        <div className="-ml-px relative inline-flex items-center space-x-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
-                                            <CopyButton text={sshCommand} className="border-0 bg-transparent shadow-none" />
-                                        </div>
+                                    <div className="flex items-center mb-1">
+                                        <User className="w-4 h-4 mr-1 text-gray-500" />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">User SSH Command</label>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-900 rounded font-mono text-sm break-all text-gray-900 dark:text-white">
+                                        <span>{userSSHCommand}</span>
+                                        <CopyButton text={userSSHCommand} />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center mb-1">
+                                        <ShieldCheck className="w-4 h-4 mr-1 text-indigo-500" />
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Admin SSH Command</label>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-900 rounded font-mono text-sm break-all text-gray-900 dark:text-white">
+                                        <span>{adminSSHCommand}</span>
+                                        <CopyButton text={adminSSHCommand} />
                                     </div>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-                                    <div className="mt-1 flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-900 rounded font-mono text-sm break-all">
+                                    <div className="mt-1 flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-900 rounded font-mono text-sm break-all text-gray-900 dark:text-white">
                                         <span>{env.status?.password || 'No password set'}</span>
                                         {env.status?.password && <CopyButton text={env.status.password} />}
                                     </div>
