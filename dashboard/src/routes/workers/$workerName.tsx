@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { getWorker, getProblemEnvironments, updateWorkerSchedule } from '../../data/k8s';
-import { ChevronLeft, Server, Activity, Box, FileCode, Cpu, HardDrive, ChevronDown, CalendarCheck, CalendarX, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Server, Activity, Box, FileCode, Cpu, HardDrive, ChevronDown, CalendarCheck, CalendarX, RefreshCw, LineChart } from 'lucide-react';
 import { Tabs } from '../../components/Tabs';
 import { Card } from '../../components/Card';
 
@@ -247,6 +247,16 @@ function WorkerDetailPage() {
                                         <div className="fixed inset-0 z-10" onClick={() => setIsActionMenuOpen(false)}></div>
                                         <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-20 focus:outline-none">
                                             <div className="py-1">
+                                                <a
+                                                    href={`https://janog57-grafana.proelbtn.com/d/ad22s2f/telescope-3a-3a-worker?var-name=${worker.metadata.name}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                    onClick={() => setIsActionMenuOpen(false)}
+                                                >
+                                                    <LineChart className="mr-3 h-4 w-4" />
+                                                    Grafana
+                                                </a>
                                                 <Link
                                                     to="/problem-environments"
                                                     search={{ worker: [worker.metadata.name] }}
