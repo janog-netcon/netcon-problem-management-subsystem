@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
-import { getWorker, getProblemEnvironments } from '../../data/k8s';
-import { ChevronLeft, Server, Activity, Box, FileCode, Cpu, HardDrive, ChevronDown } from 'lucide-react';
+import { getWorker, getProblemEnvironments, updateWorkerSchedule } from '../../data/k8s';
+import { ChevronLeft, Server, Activity, Box, FileCode, Cpu, HardDrive, ChevronDown, CalendarCheck, CalendarX, RefreshCw } from 'lucide-react';
 import { Tabs } from '../../components/Tabs';
 import { Card } from '../../components/Card';
 
@@ -18,7 +18,28 @@ export const Route = createFileRoute('/workers/$workerName')({
 
 function WorkerDetailPage() {
     const { worker, envsList } = Route.useLoaderData();
+    const router = useRouter();
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+    const [activeModal, setActiveModal] = useState<'enable' | 'disable' | null>(null);
+    const [confirmName, setConfirmName] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleAction = async (action: 'enable' | 'disable') => {
+        if (confirmName !== worker.metadata.name) return;
+
+        setIsProcessing(true);
+        try {
+            await updateWorkerSchedule({ data: { name: worker.metadata.name, disabled: action === 'disable' } });
+            await router.invalidate();
+            setActiveModal(null);
+            setConfirmName('');
+        } catch (err) {
+            console.error(`Failed to ${action} schedule:`, err);
+            alert(`Failed to ${action} worker schedule`);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     // Filter environments running on this worker
     const runningEnvs = envsList.items.filter(env => env.spec.workerName === worker.metadata.name);
@@ -235,6 +256,28 @@ function WorkerDetailPage() {
                                                     <Activity className="mr-3 h-4 w-4" />
                                                     Search Environments
                                                 </Link>
+                                                <button
+                                                    onClick={() => { setActiveModal('enable'); setIsActionMenuOpen(false); }}
+                                                    disabled={!worker.spec.disableSchedule}
+                                                    className={`flex items-center w-full px-4 py-2 text-sm text-left ${!worker.spec.disableSchedule
+                                                        ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                                                        : 'text-green-600 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                        }`}
+                                                >
+                                                    <CalendarCheck className="mr-3 h-4 w-4" />
+                                                    Enable Schedule
+                                                </button>
+                                                <button
+                                                    onClick={() => { setActiveModal('disable'); setIsActionMenuOpen(false); }}
+                                                    disabled={!!worker.spec.disableSchedule}
+                                                    className={`flex items-center w-full px-4 py-2 text-sm text-left ${worker.spec.disableSchedule
+                                                        ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                                                        : 'text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                        }`}
+                                                >
+                                                    <CalendarX className="mr-3 h-4 w-4" />
+                                                    Disable Schedule
+                                                </button>
                                             </div>
                                         </div>
                                     </>
@@ -246,6 +289,82 @@ function WorkerDetailPage() {
 
                 <Tabs tabs={tabs} />
             </div>
+
+            {/* Modals */}
+            {activeModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                        aria-hidden="true"
+                        onClick={() => setActiveModal(null)}
+                    />
+
+                    {/* Modal Centerer */}
+                    <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                        <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                            <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-100 dark:border-gray-700">
+                                <div className="sm:flex sm:items-start">
+                                    <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10 ${activeModal === 'disable' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-green-100 dark:bg-green-900/30'}`}>
+                                        {activeModal === 'disable' ? (
+                                            <CalendarX className="h-6 w-6 text-red-600 dark:text-red-400" />
+                                        ) : (
+                                            <CalendarCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
+                                        )}
+                                    </div>
+                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                        <h3 className="text-lg leading-6 font-bold text-gray-900 dark:text-white">
+                                            {activeModal === 'disable' ? 'Disable Schedule' : 'Enable Schedule'}
+                                        </h3>
+                                        <div className="mt-2">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                {activeModal === 'disable'
+                                                    ? 'This will disable scheduling for this worker. New environments will not be scheduled here. Are you sure?'
+                                                    : 'This will enable scheduling for this worker. New environments may be scheduled here. Are you sure?'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="px-4 py-5 sm:p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        To confirm, type <span className="font-mono font-bold select-none text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-1 rounded">{worker.metadata.name}</span> in the box below:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={confirmName}
+                                        onChange={(e) => setConfirmName(e.target.value)}
+                                        className="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 cursor-text relative z-20"
+                                        placeholder={worker.metadata.name}
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
+                                <button
+                                    type="button"
+                                    disabled={confirmName !== worker.metadata.name || isProcessing}
+                                    onClick={() => handleAction(activeModal)}
+                                    className={`w-full inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm sm:w-auto sm:text-sm ${activeModal === 'disable' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'} ${(confirmName !== worker.metadata.name || isProcessing) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    {isProcessing && <RefreshCw className="animate-spin -ml-1 mr-2 h-4 w-4" />}
+                                    Confirm {activeModal === 'disable' ? 'Disable' : 'Enable'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setActiveModal(null); setConfirmName(''); }}
+                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-base font-medium text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

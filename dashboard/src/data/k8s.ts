@@ -417,3 +417,29 @@ export const unassignProblemEnvironment = createServerFn({ method: "POST" })
             throw err;
         }
     });
+
+export const updateWorkerSchedule = createServerFn({ method: "POST" })
+    .inputValidator((data: { name: string; disabled: boolean }) => data)
+    .handler(async ({ data: { name, disabled } }) => {
+        try {
+            const customApi = await getApiClient();
+            // Using JSON Patch for update
+            await customApi.patchClusterCustomObject({
+                group: GROUP,
+                version: VERSION,
+                plural: 'workers',
+                name: name,
+                body: [
+                    {
+                        op: 'replace',
+                        path: '/spec/disableSchedule',
+                        value: disabled
+                    }
+                ]
+            });
+            return { success: true };
+        } catch (err: any) {
+            console.error(`Failed to update worker schedule for ${name}:`, err);
+            throw err;
+        }
+    });
