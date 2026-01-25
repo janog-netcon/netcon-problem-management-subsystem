@@ -104,3 +104,29 @@ jobs:
         with:
           name: kubectl-netcon
           path: ./kubectl-netcon
+
+  build-telescope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to Sakura Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: janog57-netcon.sakuracr.jp
+          username: ${{ secrets.SAKURA_REGISTRY_USERNAME }}
+          password: ${{ secrets.SAKURA_REGISTRY_PASSWORD }}
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push telescope
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./dashboard/Dockerfile
+          push: true
+          tags: |
+            janog57-netcon.sakuracr.jp/netcon-pms-telescope:latest
+            janog57-netcon.sakuracr.jp/netcon-pms-telescope:master
+            janog57-netcon.sakuracr.jp/netcon-pms-telescope:commit-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
