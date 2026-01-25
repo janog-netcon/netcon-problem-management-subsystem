@@ -5,6 +5,7 @@ import "github.com/prometheus/client_golang/prometheus"
 func RegisterMetrics(reg prometheus.Registerer) {
 	reg.MustRegister(sshAuthTotal)
 	reg.MustRegister(sshSessionDuration)
+	reg.MustRegister(sshSessionsInFlight)
 }
 
 var (
@@ -30,6 +31,15 @@ var (
 			Buckets: []float64{
 				10, 30, 60, 180, 300, 600, 900, 1200, 1800, 2700, 3600, 7200, 10800, 14400, 21600, 28800, 36000, 43200,
 			},
+		},
+	)
+
+	sshSessionsInFlight = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "netcon",
+			Subsystem: "nclet",
+			Name:      "ssh_sessions_in_flight",
+			Help:      "Current number of in-flight SSH sessions",
 		},
 	)
 )
