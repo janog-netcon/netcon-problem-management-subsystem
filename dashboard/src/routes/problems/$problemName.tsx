@@ -230,7 +230,7 @@ function ProblemDetailPage() {
                             </div>
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{problem.metadata.name}</h1>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Created on {new Date(problem.metadata.creationTimestamp).toLocaleDateString()}</p>
+
                             </div>
                         </div>
                         <div className="flex items-center">
