@@ -439,7 +439,28 @@ export const updateWorkerSchedule = createServerFn({ method: "POST" })
             });
             return { success: true };
         } catch (err: any) {
-            console.error(`Failed to update worker schedule for ${name}:`, err);
             throw err;
+        }
+    });
+
+export const getConfigMap = createServerFn({ method: "GET" })
+    .inputValidator((name: string) => name)
+    .handler(async ({ data: name }) => {
+        try {
+            const { KubeConfig, CoreV1Api } = await import('@kubernetes/client-node');
+            const kc = new KubeConfig();
+            kc.loadFromDefault();
+            const k8sApi = kc.makeApiClient(CoreV1Api);
+
+            const res = await k8sApi.readNamespacedConfigMap({
+                name: name,
+                namespace: NAMESPACE,
+            });
+            // Convert to plain object to handle serialization
+            return JSON.parse(JSON.stringify(res));
+        } catch (err) {
+            console.error(`Failed to fetch configmap ${name}:`, err);
+            // Return null if not found or error, so UI can handle it gracefully (e.g. skip tab)
+            return null;
         }
     });

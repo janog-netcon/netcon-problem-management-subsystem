@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
-import { getProblem, getProblemEnvironments, getWorkers } from '../../data/k8s';
+import { getProblem, getProblemEnvironments, getWorkers, getConfigMap } from '../../data/k8s';
 import yaml from 'js-yaml';
 import { cleanManifest } from '../../utils/manifest';
 import { ChevronLeft, Box, Activity, Network, FileCode, ChevronDown, LineChart } from 'lucide-react';
@@ -15,12 +15,32 @@ export const Route = createFileRoute('/problems/$problemName')({
             getProblemEnvironments(),
             getWorkers(),
         ]);
-        return { problem, envsList, workers };
+
+        const cmNames = new Set<string>();
+        if (problem.spec.template?.spec?.topologyFile?.configMapRef?.name) {
+            cmNames.add(problem.spec.template.spec.topologyFile.configMapRef.name);
+        }
+        if (problem.spec.template?.spec?.configFiles) {
+            problem.spec.template.spec.configFiles.forEach((cf: any) => {
+                if (cf.configMapRef?.name) {
+                    cmNames.add(cf.configMapRef.name);
+                }
+            });
+        }
+
+        const configMaps = await Promise.all(
+            Array.from(cmNames).map(async name => {
+                const cm = await getConfigMap({ data: name });
+                return { name, data: cm };
+            })
+        );
+
+        return { problem, envsList, workers, configMaps };
     },
 });
 
 function ProblemDetailPage() {
-    const { problem, envsList, workers } = Route.useLoaderData();
+    const { problem, envsList, workers, configMaps } = Route.useLoaderData();
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
 
     const relatedEnvs = envsList.items.filter((env) => {
@@ -46,32 +66,7 @@ function ProblemDetailPage() {
                         <StatusCard label="Total" value={problem.status?.replicas?.total ?? 0} color="purple" />
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card title="Specification">
-                            <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                                <div className="sm:col-span-1">
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Assignable Replicas</dt>
-                                    <dd className="mt-1 text-sm text-gray-900 dark:text-white">{problem.spec.assignableReplicas}</dd>
-                                </div>
-                                <div className="sm:col-span-1">
-                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">UID</dt>
-                                    <dd className="mt-1 text-xs font-mono text-gray-900 dark:text-white">{problem.metadata.uid}</dd>
-                                </div>
-                            </dl>
-                        </Card>
-                        <Card title="Internal Status">
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Generation</span>
-                                    <span className="text-sm font-mono text-gray-900 dark:text-white">{problem.metadata.generation ?? '-'}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Resource Version</span>
-                                    <span className="text-sm font-mono text-gray-900 dark:text-white">{problem.metadata.resourceVersion}</span>
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
+
 
                     <Card title="Worker Distribution">
                         <div className="overflow-x-auto mt-2">
@@ -79,14 +74,22 @@ function ProblemDetailPage() {
                                 <thead className="bg-gray-50 dark:bg-gray-700">
                                     <tr>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Worker</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Environment Count</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ready</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assigned</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Deploying</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
                                         <th scope="col" className="relative px-6 py-3"><span className="sr-only">View</span></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     {workers.items.map(worker => {
-                                        const count = relatedEnvs.filter(e => e.spec.workerName === worker.metadata.name).length;
-                                        if (count === 0) return null;
+                                        const workerEnvs = relatedEnvs.filter(e => e.spec.workerName === worker.metadata.name);
+                                        if (workerEnvs.length === 0) return null;
+
+                                        const total = workerEnvs.length;
+                                        const assigned = workerEnvs.filter(e => e.status?.conditions?.some(c => c.type === 'Assigned' && c.status === 'True')).length;
+                                        const ready = workerEnvs.filter(e => e.status?.conditions?.some(c => c.type === 'Ready' && c.status === 'True')).length - assigned;
+                                        const deploying = total - (ready + assigned);
 
                                         return (
                                             <tr key={worker.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -96,8 +99,17 @@ function ProblemDetailPage() {
                                                         {worker.metadata.name}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                    {count}
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 dark:text-green-400">
+                                                    {ready}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 dark:text-indigo-400">
+                                                    {assigned}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 dark:text-blue-400">
+                                                    {deploying}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                                    {total}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <Link
@@ -119,7 +131,7 @@ function ProblemDetailPage() {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400 italic">
                                                 Unscheduled
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                            <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                 {relatedEnvs.filter(e => !e.spec.workerName).length}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -143,75 +155,19 @@ function ProblemDetailPage() {
                 </div>
             ),
         },
+
         {
-            id: 'environments',
-            label: 'Environments',
-            icon: <Box className="w-4 h-4" />,
-            content: (
-                <Card>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Worker</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Conditions</th>
-                                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">View</span></th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {relatedEnvs.map(env => (
-                                    <tr key={env.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                            <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="hover:underline text-indigo-600 dark:text-indigo-400">
-                                                {env.metadata.name}
-                                            </Link>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                            {env.spec.workerName || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 space-x-1">
-                                            {env.status?.conditions?.map(cond => (
-                                                <span key={cond.type} className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cond.status === 'True'
-                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                                                    }`}>
-                                                    {cond.type}
-                                                </span>
-                                            ))}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                                                Details
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {relatedEnvs.length === 0 && (
-                                    <tr>
-                                        <td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                                            No environments found.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            ),
-        },
-        {
+
             id: 'manifest',
-            label: 'Manifest',
+            label: 'Manifests',
             icon: <FileCode className="w-4 h-4" />,
             content: (
-                <Card title="Resource Manifest">
-                    <pre className="p-4 bg-gray-900 text-gray-100 rounded-lg overflow-x-auto text-xs font-mono">
-                        {yaml.dump(cleanManifest(problem))}
-                    </pre>
-                </Card>
+                <div className="space-y-6">
+                    <ManifestViewer problem={problem} configMaps={configMaps} />
+                </div>
             )
         }
+
     ];
 
     return (
@@ -283,6 +239,7 @@ function ProblemDetailPage() {
     );
 }
 
+
 function StatusCard({ label, value, color }: { label: string, value: number, color: string }) {
     const colorClasses: Record<string, string> = {
         gray: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700',
@@ -297,5 +254,54 @@ function StatusCard({ label, value, color }: { label: string, value: number, col
             <dt className="text-sm font-medium opacity-80 truncate">{label}</dt>
             <dd className="mt-1 text-3xl font-semibold">{value}</dd>
         </div>
+    );
+}
+
+function ManifestViewer({ problem, configMaps }: { problem: any, configMaps: { name: string, data: any }[] }) {
+    const [activeTab, setActiveTab] = useState('resource');
+
+    const tabs = [
+        { id: 'resource', label: 'Resource' },
+        ...configMaps.map(cm => ({ id: `cm-${cm.name}`, label: `ConfigMap: ${cm.name}` }))
+    ];
+
+    const getActiveContent = () => {
+        if (activeTab === 'resource') {
+            return yaml.dump(cleanManifest(problem));
+        }
+        const cm = configMaps.find(c => `cm-${c.name}` === activeTab);
+        if (cm && cm.data) {
+            return yaml.dump(cleanManifest(cm.data));
+        }
+        return '';
+    };
+
+    return (
+        <Card title="Resource Manifest">
+            <div className="bg-gray-900 rounded-lg overflow-hidden font-mono text-xs">
+                {/* Tabs */}
+                <div className="flex border-b border-gray-700 overflow-x-auto">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`px-4 py-2 font-medium focus:outline-none transition-colors whitespace-nowrap ${activeTab === tab.id
+                                ? 'bg-gray-800 text-white border-b-2 border-indigo-500'
+                                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Content */}
+                <div className="max-h-[600px] overflow-auto p-4">
+                    <pre className="text-gray-300 whitespace-pre font-mono leading-relaxed">
+                        {getActiveContent()}
+                    </pre>
+                </div>
+            </div>
+        </Card>
     );
 }
