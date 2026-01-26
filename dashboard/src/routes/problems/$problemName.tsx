@@ -6,6 +6,7 @@ import { cleanManifest } from '../../utils/manifest';
 import { ChevronLeft, Box, Activity, Network, FileCode, ChevronDown, LineChart } from 'lucide-react';
 import { Tabs } from '../../components/Tabs';
 import { Card } from '../../components/Card';
+import { TopologyViewer } from '../../components/TopologyViewer';
 
 export const Route = createFileRoute('/problems/$problemName')({
     component: ProblemDetailPage,
@@ -51,6 +52,10 @@ function ProblemDetailPage() {
 
     // Calculate stats
 
+    const topologyRef = problem.spec.template?.spec?.topologyFile?.configMapRef;
+    const topologyCm = topologyRef ? configMaps.find(cm => cm.name === topologyRef.name) : null;
+    const manifestContent = topologyCm?.data?.data ? topologyCm.data.data[topologyRef.key || 'manifest.yml'] : null;
+
     const tabs = [
         {
             id: 'overview',
@@ -65,8 +70,6 @@ function ProblemDetailPage() {
                         <StatusCard label="Deploying" value={(problem.status?.replicas?.total ?? 0) - ((problem.status?.replicas?.assignable ?? 0) + (problem.status?.replicas?.assigned ?? 0))} color="blue" />
                         <StatusCard label="Total" value={problem.status?.replicas?.total ?? 0} color="purple" />
                     </div>
-
-
 
                     <Card title="Worker Distribution">
                         <div className="overflow-x-auto mt-2">
@@ -152,10 +155,26 @@ function ProblemDetailPage() {
                             </table>
                         </div>
                     </Card>
+
                 </div>
             ),
         },
-
+        {
+            id: 'topology',
+            label: 'Topology',
+            icon: <Network className="w-4 h-4" />,
+            content: (
+                <div className="space-y-6">
+                    {manifestContent ? (
+                        <TopologyViewer manifestContent={manifestContent} />
+                    ) : (
+                        <Card title="Network Topology">
+                            <div className="p-4 text-gray-500 italic">No topology definition found in manifest.</div>
+                        </Card>
+                    )}
+                </div>
+            )
+        },
         {
 
             id: 'manifest',
