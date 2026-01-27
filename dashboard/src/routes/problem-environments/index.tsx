@@ -26,8 +26,8 @@ export const Route = createFileRoute('/problem-environments/')({
         return { envs, problems, workers, updatedAt: new Date() };
     },
     validateSearch: (search) => envSearchSchema.parse(search),
-    staleTime: 60000,
-    gcTime: 300000,
+    staleTime: 20000,
+    gcTime: 60000,
     shouldReload: false,
 });
 
