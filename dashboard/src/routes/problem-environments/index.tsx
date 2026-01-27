@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { RefreshCw } from 'lucide-react';
 
 const envSearchSchema = z.object({
-    p: z.number().optional(),
+    p: z.coerce.number().optional(),
     q: z.string().optional(),
     worker: z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(z.string())).optional(),
     problem: z.preprocess((v) => (typeof v === 'string' ? v.split(',').filter(Boolean) : v), z.array(z.string())).optional(),
