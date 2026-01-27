@@ -93,7 +93,7 @@ export function TopologyViewer({ manifestContent }: TopologyViewerProps) {
 
     if (error) {
         return (
-            <Card title={<><Activity className="w-5 h-5 mr-2" /> Network Topology</>}>
+            <Card title={<>Network Topology</>}>
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-md flex items-center">
                     <AlertTriangle className="w-5 h-5 mr-2" />
                     {error}
@@ -103,7 +103,7 @@ export function TopologyViewer({ manifestContent }: TopologyViewerProps) {
     }
 
     return (
-        <Card title={<><Activity className="w-5 h-5 mr-2" /> Network Topology</>}>
+        <Card title={<>Network Topology</>}>
             <div className="w-full h-[500px] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 <div ref={graphRef} className="w-full h-full" style={{ textAlign: 'center' }} />
             </div>

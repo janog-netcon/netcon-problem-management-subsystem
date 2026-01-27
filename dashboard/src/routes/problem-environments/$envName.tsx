@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { useState } from 'react';
 import { getProblemEnvironment, getDeploymentLog, assignProblemEnvironment, unassignProblemEnvironment, deleteProblemEnvironment, getWorker, getProblem, getConfigMap } from '../../data/k8s';
 import { getStatusColor, getStatusText } from '../../data/status';
-import { ChevronLeft, Server, Activity, Terminal, Key, CheckCircle, Clock, FileText, FileCode, ChevronDown, UserPlus, UserMinus, Trash2, AlertTriangle, RefreshCw, ShieldCheck, User, LineChart, Network } from 'lucide-react';
+import { ChevronLeft, Server, CheckCircle, Clock, FileCode, ChevronDown, UserPlus, UserMinus, Trash2, AlertTriangle, RefreshCw, LineChart, Network, LayoutDashboard, Info, History, Container, ScrollText, FileQuestion, Box, Terminal } from 'lucide-react';
 import { Card } from '../../components/Card';
 import { CopyButton } from '../../components/CopyButton';
 import { AnsiText } from '../../components/AnsiText';
@@ -122,17 +122,16 @@ function ProblemEnvironmentDetailPage() {
         {
             id: 'overview',
             label: 'Overview',
-            icon: <Activity className="w-4 h-4" />,
+            icon: <LayoutDashboard className="w-4 h-4" />,
             content: (
                 <div className="space-y-6">
                     <div className="space-y-6">
                         {/* Basic Info */}
-                        <Card title={<><Key className="w-5 h-5 mr-2" /> Basic Info</>}>
+                        <Card title={<><Info className="w-5 h-5 mr-2" /> Basic Info</>}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <div>
                                         <div className="flex items-center mb-1">
-                                            <Activity className="w-4 h-4 mr-1 text-gray-500" />
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Problem</label>
                                         </div>
                                         <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-900 rounded font-medium text-sm text-gray-900 dark:text-white">
@@ -152,7 +151,6 @@ function ProblemEnvironmentDetailPage() {
 
                                     <div>
                                         <div className="flex items-center mb-1">
-                                            <User className="w-4 h-4 mr-1 text-gray-500" />
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">User SSH Command</label>
                                         </div>
                                         <div className="mt-1 flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-900 rounded font-mono text-sm break-all text-gray-900 dark:text-white">
@@ -183,7 +181,6 @@ function ProblemEnvironmentDetailPage() {
                                 <div className="space-y-4">
                                     <div>
                                         <div className="flex items-center mb-1">
-                                            <Server className="w-4 h-4 mr-1 text-gray-500" />
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Worker</label>
                                         </div>
                                         <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-900 rounded font-medium text-sm text-gray-900 dark:text-white">
@@ -199,7 +196,6 @@ function ProblemEnvironmentDetailPage() {
 
                                     <div>
                                         <div className="flex items-center mb-1">
-                                            <ShieldCheck className="w-4 h-4 mr-1 text-indigo-500" />
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Admin SSH Command</label>
                                         </div>
                                         <div className="mt-1 flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-900 rounded font-mono text-sm break-all text-gray-900 dark:text-white">
@@ -212,7 +208,7 @@ function ProblemEnvironmentDetailPage() {
                         </Card>
 
                         {/* Timeline */}
-                        <Card title={<><Activity className="w-5 h-5 mr-2" /> Timeline</>}>
+                        <Card title={<><History className="w-5 h-5 mr-2" /> Timeline</>}>
                             <div className="relative border-l-2 border-gray-200 dark:border-gray-700 ml-3 space-y-6 pb-2">
                                 {['Scheduled', 'Deployed', 'Ready', 'Assigned'].map((type) => {
                                     const cond = env.status?.conditions?.find(c => c.type === type);
@@ -245,7 +241,7 @@ function ProblemEnvironmentDetailPage() {
                     </div>
 
                     <div className="space-y-6">
-                        <Card title={<><Terminal className="w-5 h-5 mr-2" /> Containers</>}>
+                        <Card title={<><Container className="w-5 h-5 mr-2" /> Containers</>}>
                             <div className="overflow-hidden">
                                 {env.status?.containers && env.status.containers.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -277,7 +273,7 @@ function ProblemEnvironmentDetailPage() {
                             </div>
                         </Card>
 
-                        <Card title={<><FileText className="w-5 h-5 mr-2" /> Deployment Logs</>}>
+                        <Card title={<><ScrollText className="w-5 h-5 mr-2" /> Deployment Logs</>}>
                             <LogViewer logs={deployLog} />
                         </Card>
                     </div>
@@ -324,7 +320,7 @@ function ProblemEnvironmentDetailPage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div className="flex items-center space-x-3">
                             <div className="p-3 bg-teal-100 dark:bg-teal-900/50 rounded-lg">
-                                <Server className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+                                <Box className="w-8 h-8 text-teal-600 dark:text-teal-400" />
                             </div>
                             <div>
                                 <div className="flex items-center space-x-2">

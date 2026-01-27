@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { getProblems, getProblemEnvironments, getWorkers } from '../data/k8s';
-import { Box, Server, Layers } from 'lucide-react';
+import { Box, Server, FileQuestion } from 'lucide-react';
 
 export const Route = createFileRoute('/')({
   component: DashboardHome,
@@ -43,7 +43,7 @@ function DashboardHome() {
           <SummaryCard
             title="Problems"
             count={problemCount}
-            icon={<Box className="w-8 h-8 text-white" />}
+            icon={<FileQuestion className="w-8 h-8 text-white" />}
             color="bg-indigo-500"
             link="/problems"
           />
@@ -51,7 +51,7 @@ function DashboardHome() {
             title="Environments"
             count={envCount}
             subtext={`${assignedEnvs} Assigned / ${readyEnvs} Ready`}
-            icon={<Layers className="w-8 h-8 text-white" />}
+            icon={<Box className="w-8 h-8 text-white" />}
             color="bg-teal-500"
             link="/problem-environments"
           />

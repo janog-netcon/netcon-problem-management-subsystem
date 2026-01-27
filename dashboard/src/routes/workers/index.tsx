@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { getWorkers } from '../../data/k8s';
 import { SearchBar } from '../../components/SearchBar';
 import { z } from 'zod';
-import { Cpu, HardDrive, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Cpu, MemoryStick, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 
 const workerSearchSchema = z.object({
     q: z.string().optional(),
@@ -150,7 +150,7 @@ function WorkersPage() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="w-full max-w-[100px]">
                                                     <div className="flex justify-between text-xs mb-1">
-                                                        <span className="text-gray-500 dark:text-gray-400"><HardDrive className="w-3 h-3 inline mr-1" /></span>
+                                                        <span className="text-gray-500 dark:text-gray-400"><MemoryStick className="w-3 h-3 inline mr-1" /></span>
                                                         <span className={`font-medium ${memUsage > 80 ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}`}>
                                                             {memUsage.toFixed(1)}%
                                                         </span>

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { getWorker, getProblemEnvironments, updateWorkerSchedule } from '../../data/k8s';
 import yaml from 'js-yaml';
 import { cleanManifest } from '../../utils/manifest';
-import { ChevronLeft, Server, Activity, Box, FileCode, Cpu, HardDrive, ChevronDown, CalendarCheck, CalendarX, RefreshCw, LineChart } from 'lucide-react';
+import { ChevronLeft, Server, Box, FileCode, Cpu, ChevronDown, CalendarCheck, CalendarX, RefreshCw, LineChart, LayoutDashboard, MemoryStick } from 'lucide-react';
 import { Tabs } from '../../components/Tabs';
 import { Card } from '../../components/Card';
 
@@ -54,7 +54,7 @@ function WorkerDetailPage() {
         {
             id: 'overview',
             label: 'Overview',
-            icon: <Activity className="w-4 h-4" />,
+            icon: <LayoutDashboard className="w-4 h-4" />,
             content: (
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -69,7 +69,7 @@ function WorkerDetailPage() {
                             label="Memory Usage"
                             value={`${memUsage.toFixed(1)}%`}
                             progress={memUsage}
-                            icon={<HardDrive className="w-5 h-5" />}
+                            icon={<MemoryStick className="w-5 h-5" />}
                             color={memUsage > 80 ? 'red' : 'purple'}
                         />
                         <StatusCard
@@ -202,7 +202,7 @@ function WorkerDetailPage() {
                                                     className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     onClick={() => setIsActionMenuOpen(false)}
                                                 >
-                                                    <Activity className="mr-3 h-4 w-4" />
+                                                    <Box className="mr-3 h-4 w-4" />
                                                     Search Environments
                                                 </Link>
                                                 <button

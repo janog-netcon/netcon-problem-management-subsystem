@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { getProblem, getProblemEnvironments, getWorkers, getConfigMap } from '../../data/k8s';
-import { ChevronLeft, Box, Activity, Network, FileCode, ChevronDown, LineChart } from 'lucide-react';
+import { ChevronLeft, Box, Network, FileCode, ChevronDown, LineChart, LayoutDashboard, FileQuestion } from 'lucide-react';
 import { Tabs } from '../../components/Tabs';
 import { Card } from '../../components/Card';
 import { TopologyViewer } from '../../components/TopologyViewer';
@@ -59,7 +59,7 @@ function ProblemDetailPage() {
         {
             id: 'overview',
             label: 'Overview',
-            icon: <Activity className="w-4 h-4" />,
+            icon: <LayoutDashboard className="w-4 h-4" />,
             content: (
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
@@ -97,7 +97,6 @@ function ProblemDetailPage() {
                                             <tr key={worker.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                                     <div className="flex items-center">
-                                                        <Network className="w-4 h-4 mr-2 text-gray-400" />
                                                         {worker.metadata.name}
                                                     </div>
                                                 </td>
@@ -200,7 +199,7 @@ function ProblemDetailPage() {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 w-full">
                         <div className="flex items-center space-x-3">
                             <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
-                                <Box className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                                <FileQuestion className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{problem.metadata.name}</h1>
@@ -239,7 +238,7 @@ function ProblemDetailPage() {
                                                     className="flex items-center w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                     onClick={() => setIsActionMenuOpen(false)}
                                                 >
-                                                    <Activity className="mr-3 h-4 w-4" />
+                                                    <Box className="mr-3 h-4 w-4" />
                                                     Search Environments
                                                 </Link>
                                             </div>
