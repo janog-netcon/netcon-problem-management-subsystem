@@ -5,3 +5,13 @@ testbin/
 
 cmd/**/Dockerfile
 cmd/**/sub.mk
+
+# Dashboard
+dashboard/node_modules/
+dashboard/.output/
+dashboard/dist/
+
+# Generic
+.git/
+.vscode/
+.jj/
