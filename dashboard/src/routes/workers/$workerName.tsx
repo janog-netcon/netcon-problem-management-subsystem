@@ -80,7 +80,7 @@ function WorkerDetailPage() {
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
                         <Card title="Node Information">
                             <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                                 <div className="sm:col-span-1">
@@ -133,79 +133,8 @@ function WorkerDetailPage() {
                             </dl>
                         </Card>
 
-                        <Card title="Conditions">
-                            <div className="space-y-4">
-                                {worker.status?.conditions?.map((cond, idx) => (
-                                    <div key={idx} className="border-l-2 border-gray-200 dark:border-gray-700 pl-4 py-1">
-                                        <div className="flex items-center justify-between">
-                                            <span className="font-medium text-gray-900 dark:text-white">{cond.type}</span>
-                                            <span className={`text-xs px-2 py-0.5 rounded ${cond.status === 'True' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                                                {cond.status}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-500 mt-1">{cond.message || cond.reason || 'No details available'}</p>
-                                        <span className="text-xs text-gray-400 mt-1 block">
-                                            Last Transition: {new Date(cond.lastTransitionTime).toLocaleString()}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
                     </div>
                 </div>
-            ),
-        },
-        {
-            id: 'environments',
-            label: 'Running Environments',
-            icon: <Box className="w-4 h-4" />,
-            content: (
-                <Card title={`Environments on ${worker.metadata.name}`}>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                            <thead className="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">View</span></th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {runningEnvs.map(env => (
-                                    <tr key={env.metadata.name} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                            <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="hover:underline text-indigo-600 dark:text-indigo-400">
-                                                {env.metadata.name}
-                                            </Link>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 space-x-1">
-                                            {env.status?.conditions?.map(cond => (
-                                                <span key={cond.type} className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cond.status === 'True'
-                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-                                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                                                    }`}>
-                                                    {cond.type}
-                                                </span>
-                                            ))}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link to="/problem-environments/$envName" params={{ envName: env.metadata.name }} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                                                Details
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {runningEnvs.length === 0 && (
-                                    <tr>
-                                        <td colSpan={3} className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
-                                            No environments currently running on this worker.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
             ),
         },
         {
