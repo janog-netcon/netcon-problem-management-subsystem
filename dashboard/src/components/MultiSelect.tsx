@@ -69,7 +69,7 @@ export function MultiSelect({
                             </div>
                             <input
                                 type="text"
-                                className="block w-full pl-9 pr-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                className="block w-full pl-9 pr-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 placeholder="Filter options..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -89,13 +89,13 @@ export function MultiSelect({
                             filteredOptions.map((option) => (
                                 <li
                                     key={option.value}
-                                    className="relative cursor-default select-none py-2 pl-3 pr-9 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 group"
+                                    className="relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900 dark:text-gray-200 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 group"
                                     onClick={() => onChange(option.value)}
                                 >
                                     <div className="flex items-center">
                                         <div className={`flex shrink-0 items-center justify-center h-4 w-4 rounded border ${selectedValues.includes(option.value)
-                                                ? 'bg-indigo-500 border-indigo-500'
-                                                : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'
+                                            ? 'bg-indigo-500 border-indigo-500'
+                                            : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'
                                             } transition-colors mr-2 group-hover:border-white`}>
                                             {selectedValues.includes(option.value) && (
                                                 <Check className="h-3 w-3 text-white" />
