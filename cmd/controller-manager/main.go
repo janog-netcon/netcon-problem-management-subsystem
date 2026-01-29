@@ -55,6 +55,11 @@ func main() {
 		metricsAddr          string
 		enableLeaderElection bool
 		probeAddr            string
+
+		cpuWeight       float64
+		memoryWeight    float64
+		memoryThreshold float64
+		temperature     float64
 	)
 
 	loggerOpts := zap.Options{
@@ -69,6 +74,10 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.Float64Var(&cpuWeight, "cpu-weight", 1.0, "The weight of CPU usage.")
+	flag.Float64Var(&memoryWeight, "memory-weight", 3.0, "The weight of memory usage.")
+	flag.Float64Var(&memoryThreshold, "memory-threshold", 90.0, "The threshold of memory usage.")
+	flag.Float64Var(&temperature, "temperature", 0.1, "The temperature of the Boltzmann distribution.")
 	loggerOpts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
@@ -116,6 +125,12 @@ func main() {
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("problemenvironment-controller"),
+		Parameters: controllers.SchedulerParameters{
+			CPUWeight:       cpuWeight,
+			MemoryWeight:    memoryWeight,
+			MemoryThreshold: memoryThreshold,
+			Temperature:     temperature,
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ProblemEnvironment")
 		os.Exit(1)
