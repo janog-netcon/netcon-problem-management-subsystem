@@ -222,7 +222,7 @@ func (r *ProblemEnvironmentReconciler) electWorkerFromCandidates(candidates []Ca
 
 	tmps := make([]float64, totalCandidates)
 	for i := range totalCandidates {
-		tmps[i] = math.Exp(tmps[i] / r.Parameters.Temperature)
+		tmps[i] = math.Exp(candidates[i].Score / r.Parameters.Temperature)
 	}
 
 	total := 0.0
