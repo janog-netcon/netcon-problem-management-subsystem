@@ -143,12 +143,6 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 
 	workerLength := len(workers.Items)
 
-	problemEnvironmentList := netconv1alpha1.ProblemEnvironmentList{}
-	if err := r.List(ctx, &problemEnvironmentList); err != nil {
-		log.Info("failed to ")
-		return ""
-	}
-
 	candidates := make([]CandidateWorker, 0)
 	for i := 0; i < workerLength; i++ {
 		if util.GetWorkerCondition(
@@ -222,7 +216,7 @@ func (r *ProblemEnvironmentReconciler) electWorkerFromCandidates(candidates []Ca
 
 	tmps := make([]float64, totalCandidates)
 	for i := range totalCandidates {
-		tmps[i] = math.Exp(tmps[i] / r.Parameters.Temperature)
+		tmps[i] = math.Exp(candidates[i].Score / r.Parameters.Temperature)
 	}
 
 	total := 0.0
