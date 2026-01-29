@@ -143,12 +143,6 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 
 	workerLength := len(workers.Items)
 
-	problemEnvironmentList := netconv1alpha1.ProblemEnvironmentList{}
-	if err := r.List(ctx, &problemEnvironmentList); err != nil {
-		log.Info("failed to ")
-		return ""
-	}
-
 	candidates := make([]CandidateWorker, 0)
 	for i := 0; i < workerLength; i++ {
 		if util.GetWorkerCondition(
