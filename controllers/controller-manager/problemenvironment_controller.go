@@ -19,7 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sort"
+	"math"
+	"math/rand/v2"
 	"strconv"
 	"time"
 
@@ -43,6 +44,15 @@ type ProblemEnvironmentReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
+
+	Parameters SchedulerParameters
+}
+
+type SchedulerParameters struct {
+	CPUWeight       float64
+	MemoryWeight    float64
+	MemoryThreshold float64
+	Temperature     float64
 }
 
 const MAX_USED_PERCENT float64 = 100.0
@@ -116,6 +126,14 @@ func (r *ProblemEnvironmentReconciler) updateStatus(
 	return res, nil
 }
 
+type CandidateWorker struct {
+	// Name is the name of the worker.
+	Name string
+
+	// Score is the score of the worker (0..1).
+	Score float64
+}
+
 func (r *ProblemEnvironmentReconciler) electWorker(
 	ctx context.Context,
 	workers netconv1alpha1.WorkerList,
@@ -131,29 +149,7 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 		return ""
 	}
 
-	workerCounterMap := map[string]int{}
-	for _, problemEnvironment := range problemEnvironmentList.Items {
-		// We don't need to check Scheduled here because it's already scheduled by controller-manager
-		workerName := problemEnvironment.Spec.WorkerName
-		if workerName == "" {
-			continue
-		}
-
-		if _, ok := workerCounterMap[workerName]; !ok {
-			workerCounterMap[workerName] = 1
-			continue
-		}
-
-		workerCounterMap[workerName] += 1
-	}
-
-	type WorkerResource struct {
-		Name              string
-		Count             int
-		CPUUsedPercent    float64
-		MemoryUsedPercent float64
-	}
-	arr := make([]WorkerResource, 0)
+	candidates := make([]CandidateWorker, 0)
 	for i := 0; i < workerLength; i++ {
 		if util.GetWorkerCondition(
 			&workers.Items[i],
@@ -185,11 +181,6 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 			}
 		}
 
-		count, ok := workerCounterMap[workers.Items[i].Name]
-		if !ok {
-			count = 0
-		}
-
 		cpuUsedPercent, err := strconv.ParseFloat(workers.Items[i].Status.WorkerInfo.CPUUsedPercent, 64)
 		if err != nil {
 			log.Error(err, "failed to parse CPUUsedPercent for worker election")
@@ -202,31 +193,52 @@ func (r *ProblemEnvironmentReconciler) electWorker(
 			memoryUsedPercent = MAX_USED_PERCENT
 		}
 
-		// If resource usage is above 90%, it's too danger to deploy to this worker.
-		if cpuUsedPercent > 90.0 || memoryUsedPercent > 90.0 {
+		// If memory usage is above threshold, it's too danger to deploy to this worker.
+		if memoryUsedPercent > r.Parameters.MemoryThreshold {
 			continue
 		}
 
-		arr = append(arr, WorkerResource{
-			Name:              workers.Items[i].Name,
-			Count:             count,
-			CPUUsedPercent:    cpuUsedPercent,
-			MemoryUsedPercent: memoryUsedPercent,
+		// Note: Score is scaled from 0 to 1
+		cost := (cpuUsedPercent*r.Parameters.CPUWeight + memoryUsedPercent*r.Parameters.MemoryWeight)
+		cost = cost / (r.Parameters.CPUWeight + r.Parameters.MemoryWeight) / 100
+		score := 1 - cost
+
+		candidates = append(candidates, CandidateWorker{
+			Name:  workers.Items[i].Name,
+			Score: score,
 		})
 	}
-
-	if len(arr) == 0 {
+	if len(candidates) == 0 {
 		return ""
 	}
-	sort.Slice(arr, func(i, j int) bool {
-		scoreI := max(arr[i].CPUUsedPercent, 1.1*arr[i].MemoryUsedPercent)
-		scoreJ := max(arr[j].CPUUsedPercent, 1.1*arr[j].MemoryUsedPercent)
-		return scoreI < scoreJ
-	})
 
-	log.Info("electWorker : " + arr[0].Name)
+	return r.electWorkerFromCandidates(candidates)
+}
 
-	return arr[0].Name
+// electWorkerFromCandidates elects a worker from candidates based on the score.
+// It uses the Boltzmann distribution to select a worker.
+func (r *ProblemEnvironmentReconciler) electWorkerFromCandidates(candidates []CandidateWorker) string {
+	totalCandidates := len(candidates)
+
+	tmps := make([]float64, totalCandidates)
+	for i := range totalCandidates {
+		tmps[i] = math.Exp(tmps[i] / r.Parameters.Temperature)
+	}
+
+	total := 0.0
+	for i := range totalCandidates {
+		total += tmps[i]
+	}
+
+	v := rand.Float64()
+	for i := range totalCandidates {
+		v -= tmps[i] / total
+		if v < 0 {
+			return candidates[i].Name
+		}
+	}
+
+	return candidates[totalCandidates-1].Name
 }
 
 func (r *ProblemEnvironmentReconciler) schedule(
