@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -242,9 +243,19 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) error {
 
 	// TODO: handle terminal resize
 
-	go func() { _, _ = io.Copy(ptmx, s) }()
-	go func() { _, _ = io.Copy(s, ptmx) }()
+	var wg sync.WaitGroup
+	wg.Add(2)
 
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(ptmx, s)
+	}()
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(s, ptmx)
+	}()
+
+	wg.Wait()
 	cmd.Wait()
 
 	return nil
