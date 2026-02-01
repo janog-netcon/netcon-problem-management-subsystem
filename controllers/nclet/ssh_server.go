@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -224,7 +225,7 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) error {
 		args = append(args, user.NodeName)
 	}
 
-	cmd := exec.Command("access-helper", args...)
+	cmd := exec.CommandContext(ctx, "access-helper", args...)
 
 	if otlpEndpoint != "" {
 		cmd.Env = append(syscall.Environ(), fmt.Sprintf("%s=%s", tracing.OTLPEndpointKey, otlpEndpoint))
@@ -238,13 +239,24 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) error {
 	if err != nil {
 		return tracing.WrapError(span, err, "failed to start pty")
 	}
+	defer ptmx.Close()
 
 	// TODO: handle terminal resize
 
-	go func() { _, _ = io.Copy(ptmx, s) }()
-	_, _ = io.Copy(s, ptmx)
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-	s.Close()
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(ptmx, s)
+	}()
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(s, ptmx)
+	}()
+
+	wg.Wait()
+	cmd.Wait()
 
 	return nil
 }
@@ -253,7 +265,8 @@ func (r *SSHServer) Start(ctx context.Context) error {
 	_ = log.FromContext(ctx)
 
 	server := &ssh.Server{
-		Addr: r.sshAddr,
+		Addr:        r.sshAddr,
+		IdleTimeout: 20 * time.Minute,
 		PasswordHandler: func(sctx ssh.Context, password string) bool {
 			ctx, span := tracing.Tracer.Start(sctx, "Server#PasswordHandler")
 			defer span.End()
@@ -277,6 +290,8 @@ func (r *SSHServer) Start(ctx context.Context) error {
 			return true
 		},
 		Handler: func(s ssh.Session) {
+			defer s.Close()
+
 			sshSessionsInFlight.Inc()
 			defer sshSessionsInFlight.Dec()
 
