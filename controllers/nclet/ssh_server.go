@@ -255,8 +255,21 @@ func (r *SSHServer) handle(ctx context.Context, s ssh.Session) error {
 		_, _ = io.Copy(s, ptmx)
 	}()
 
+	// case 1.) Command finished
+	//   In this case, cmd.Wait() will return first. Then, we will close the session.
+	// case 2.) Context done (Idle timer expired, underlying stream closed)
+	//   In this case, ctx.Done() will return first. Then, we will close the command.
+	if err := cmd.Wait(); err != nil {
+		span.SetStatus(codes.Error, "failed to wait for session")
+		span.RecordError(err)
+	}
+
+	// Close the session to signal the client that the session is finished.
+	if err := s.Close(); err != nil {
+		span.SetStatus(codes.Error, "failed to close session")
+		span.RecordError(err)
+	}
 	wg.Wait()
-	cmd.Wait()
 
 	return nil
 }
