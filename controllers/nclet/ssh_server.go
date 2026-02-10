@@ -304,8 +304,10 @@ func (r *SSHServer) Start(ctx context.Context) error {
 		},
 		Handler: func(s ssh.Session) {
 			sshSessionsInFlight.Inc()
-			defer sshSessionsInFlight.Dec()
-			defer s.Close()
+			defer func() {
+				sshSessionsInFlight.Dec()
+				s.Close()
+			}()
 
 			ctx, span := tracing.Tracer.Start(s.Context(), "Server#Handler")
 			defer span.End()
