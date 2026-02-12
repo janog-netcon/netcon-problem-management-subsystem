@@ -27,7 +27,7 @@
     "vite-tsconfig-paths": "^6.0.2"
   },
   "devDependencies": {
-    "@tanstack/devtools-vite": "^0.3.11",
+    "@tanstack/devtools-vite": "^0.5.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
     "@types/d3-graphviz": "^2.6.10",
