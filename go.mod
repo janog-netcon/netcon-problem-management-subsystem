@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v25.0.14+incompatible
 	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi/v5 v5.2.4
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/kr/logfmt v0.0.0-20210122060352-19f9bcb100e6
 	github.com/onsi/ginkgo/v2 v2.27.5
